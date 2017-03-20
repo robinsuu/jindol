@@ -2,13 +2,17 @@
 --
 -- levelsections.lua
 --
--- Different ground sections represented as table of properties
+-- Different ground sections represented as tables of properties
+--
+-- Default length: 19
 --
 -----------------------------------------------------------------------------------------
-local section = {}
+module(..., package.seeall)
 local sectionTable = {}
 
-function section:normalGround()
+function normalGround()
+	--local test = number
+	--print(type(test))
 	for i=0, 19, 1 do
 		local properties =
 		{
@@ -24,8 +28,8 @@ function section:normalGround()
 	return sectionTable
 end
 
-function section:holeGround()
-	for i=0, 19, 1 do
+function hole()
+	for i=0, 10, 1 do
 		local properties =
 		{
 			type="hole",
@@ -35,13 +39,8 @@ function section:holeGround()
 			h=64
 		}
 
-		if(i > 6) then
-			properties.type = "solid"
-		end
 		sectionTable[#sectionTable+1] = properties
 	end
 
 	return sectionTable
 end
-
-return section

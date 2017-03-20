@@ -5,7 +5,6 @@
 -- Holds most of the game's logic
 --
 -----------------------------------------------------------------------------------------
-
 ----
 -- Composer
 ----
@@ -41,6 +40,8 @@ local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
 local gameLoopTimer
+local memoryText -- Used for memory monitoring
+local lastGround -- Values: "hole", "normal"
 
 ----
 -- Tables
@@ -63,6 +64,11 @@ local function initDisplayGroups()
 	mainGroup = display.newGroup()
 	groundGroup = display.newGroup()
 	heroGroup = display.newGroup()
+end
+
+local function loadMemoryMonitor()
+	memoryText = display.newText(uiGroup, "", contW-150, 30, native.systemFont, 30)
+	memoryText:setFillColor(0,0,0)
 end
 
 local function loadBackground()
@@ -106,8 +112,8 @@ local function displayGroundBlock(xPos)
 end
 
 local function loadGround()
-	--createNormalGroundSection()
 	nextGroundTable = sections.normalGround()
+	lastGround = "normal"
 	for i=0, 19, 1 do
 		displayGroundBlock(64*i)
 	end
@@ -115,9 +121,14 @@ end
 
 local function createRandomSection()
 	if(mRand(2) == 1) then 
-		nextGroundTable = sections.normalGround()
-	else 
-		nextGroundTable = sections.holeGround()
+		nextGroundTable = sections:normalGround()
+		lastGround = "normal"
+	elseif(lastGround ~= "hole") then
+		nextGroundTable = sections:hole()
+		lastGround = "hole"
+	else
+		nextGroundTable = sections:normalGround()
+		lastGround = "normal"
 	end
 end
 
@@ -174,6 +185,7 @@ function scene:create(event)
 
 	loadBackground()
 	loadGround()
+	loadMemoryMonitor()
 end
 
 -- show()
@@ -215,6 +227,21 @@ function scene:destroy(event)
 	-- Code here runs prior to the removal of scene's view
 
 end
+
+----
+-- Memory monitoring
+--
+-- https://gist.github.com/JesterXL/5615023
+----
+local monitorMem = function()
+
+  collectgarbage()
+  local sysMem = collectgarbage("count") * 0.001
+  local textMem = system.getInfo("textureMemoryUsed") / 1000000
+   memoryText.text = "M: " .. math.round(sysMem*100)*0.1 .. " T: " .. math.round(textMem*100)*0.1
+end
+
+Runtime:addEventListener( "enterFrame", monitorMem )
 
 -- -----------------------------------------------------------------------------------
 -- Scene event function listeners
