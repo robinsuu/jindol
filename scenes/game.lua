@@ -16,6 +16,7 @@ local scene = composer.newScene()
 -- Requires
 ----
 local physics = require("physics")
+local sections = require("scripts.levelsections")
 
 ----
 -- Physics
@@ -104,43 +105,9 @@ local function displayGroundBlock(xPos)
 	print("nextGroundTable length: " .. #nextGroundTable)
 end
 
--- Creates a full section of normal block proprties and adds them 
--- to a table for future display
-local function createNormalGroundSection()
-	for i=0, 19, 1 do
-		local properties =
-		{
-			type="solid",
-			y=contH-32, 
-			path="images/ground/groundtile1.png",
-			w=64, 
-			h=64
-		}
-		nextGroundTable[#nextGroundTable+1] = properties
-	end
-end
-
-local function createHoleGroundSection()
-	for i=0, 19, 1 do
-		local properties =
-		{
-			type="hole",
-			y=contH-32, 
-			path="images/ground/groundtile1.png",
-			w=64, 
-			h=64
-		}
-
-		if(i > 6) then
-			properties.type = "solid"
-		end
-			
-		nextGroundTable[#nextGroundTable+1] = properties
-	end
-end
-
 local function loadGround()
-	createNormalGroundSection()
+	--createNormalGroundSection()
+	nextGroundTable = sections.normalGround()
 	for i=0, 19, 1 do
 		displayGroundBlock(64*i)
 	end
@@ -148,9 +115,9 @@ end
 
 local function createRandomSection()
 	if(mRand(2) == 1) then 
-		createNormalGroundSection()
+		nextGroundTable = sections.normalGround()
 	else 
-		createHoleGroundSection()
+		nextGroundTable = sections.holeGround()
 	end
 end
 
