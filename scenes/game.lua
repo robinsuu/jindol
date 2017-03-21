@@ -39,9 +39,9 @@ local mRand = math.random
 local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
-local gameLoopTimer
 local memoryText -- Used for memory monitoring
-local lastGround -- Values: "hole", "normal"
+local lastGround -- Values: "hole", "normal". To keep track of the previous type of ground section
+local gameSpeed
 
 ----
 -- Tables
@@ -66,6 +66,12 @@ local function initDisplayGroups()
 	heroGroup = display.newGroup()
 end
 
+local function initVariables()
+	groundTable = {}
+	nextGroundTable = {}
+	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
+end
+
 local function loadMemoryMonitor()
 	memoryText = display.newText(uiGroup, "", contW-150, 30, native.systemFont, 30)
 	memoryText:setFillColor(0,0,0)
@@ -88,6 +94,20 @@ local function loadBackground()
 	clouds3.y = contCY-175
 end
 
+local function loadScenery()
+	scenery1 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery1.x = contCX
+	scenery1.y = contH-240
+
+	scenery2 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery2.x = scenery1.x+1136
+	scenery2.y = contH-240
+
+	scenery3 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery3.x = scenery2.x+1136
+	scenery3.y = contH-240
+end
+
 local function displayGroundBlock(xPos)
 	local nextTile = nextGroundTable[#nextGroundTable] -- Get the next block to display
 	table.remove(nextGroundTable) -- Remove the block from the table
@@ -105,10 +125,6 @@ local function displayGroundBlock(xPos)
 
 	groundTable[#groundTable+1] = newTile -- Insert the new block into the display table
 	physics.addBody(newTile, "static", { bounce=0, density=10 })
-
-	-- Below can be removed
-	print("groundTable length: " .. #groundTable)
-	print("nextGroundTable length: " .. #nextGroundTable)
 end
 
 local function loadGround()
@@ -132,14 +148,18 @@ local function createRandomSection()
 	end
 end
 
+----
+-- Update on tick functions
+----
 local function updateGround()
 	-- If the nextGroundTable is empty, create a new randomly selected section
 	if(#nextGroundTable == 0) then
+		print("<<Create new ground section>>")
 		createRandomSection()
 	end
 
 	for i=#groundTable, 1, -1 do
-		groundTable[i].x = groundTable[i].x - (5 * 3) -- Move the block to the left Default: 5*3
+		groundTable[i].x = groundTable[i].x - (10 * gameSpeed) -- Move the block to the left Default: 5*3
 
 		if(groundTable[i].x < -64) then -- If the block disappears from view
 			display.remove(groundTable[i])
@@ -149,8 +169,64 @@ local function updateGround()
 	end
 end
 
-local function gameLoop()
+local function updateBackground()
+	clouds1.x = clouds1.x - (1 * gameSpeed)
+	clouds2.x = clouds2.x - (1 * gameSpeed)
+	clouds3.x = clouds3.x - (1 * gameSpeed)
+
+	if(clouds1.x < -414) then
+		clouds1.x = clouds3.x + 828
+		print("clouds1 pos:" .. clouds1.x .. " Switch!")
+	end
+
+	if(clouds2.x < -414) then
+		clouds2.x = clouds1.x + 828
+		print("clouds2 pos:" .. clouds2.x .. " Switch!")
+	end
+
+	if(clouds3.x < -414) then
+		clouds3.x = clouds2.x + 828
+		print("clouds3 pos:" .. clouds3.x .. " Switch!")
+	end
+end
+
+local function updateScenery()
+	scenery1.x = scenery1.x - (3 * gameSpeed)
+	scenery2.x = scenery2.x - (3 * gameSpeed)
+	scenery3.x = scenery3.x - (3 * gameSpeed)
+
+	if(scenery1.x < -568) then
+		scenery1.x = scenery3.x + 1136
+		print("scenery1 pos:" .. scenery1.x .. " Switch!")
+	end
+
+	if(scenery2.x < -568) then
+		scenery2.x = scenery1.x + 1136
+		print("scenery2 pos:" .. scenery2.x .. " Switch!")
+	end
+
+	if(scenery3.x < -568) then
+		scenery3.x = scenery2.x + 1136
+		print("scenery3 pos:" .. scenery3.x .. " Switch!")
+	end
+end
+----
+-- Memory monitoring
+--
+-- https://gist.github.com/JesterXL/5615023
+----
+local function monitorMemory()
+  collectgarbage()
+  local sysMem = collectgarbage("count") * 0.001
+  local textMem = system.getInfo("textureMemoryUsed") / 1000000
+   memoryText.text = "M: " .. math.round(sysMem*10)*0.1 .. " T: " .. math.round(textMem*10)*0.1
+end
+
+local function gameLoop(event)
 	updateGround()
+	updateBackground()
+	updateScenery()
+	monitorMemory()
 end
 
 local function loadEventListeners()
@@ -158,7 +234,7 @@ local function loadEventListeners()
 end
 
 local function loadTimers()
-	gameLoopTimer = timer.performWithDelay(1, gameLoop, 0)
+	Runtime:addEventListener("enterFrame", gameLoop)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -180,10 +256,10 @@ function scene:create(event)
 	sceneGroup:insert(groundGroup)
 	sceneGroup:insert(heroGroup)
 
-	groundTable = {}
-	nextGroundTable = {}
+	initVariables()
 
 	loadBackground()
+	loadScenery()
 	loadGround()
 	loadMemoryMonitor()
 end
@@ -227,21 +303,6 @@ function scene:destroy(event)
 	-- Code here runs prior to the removal of scene's view
 
 end
-
-----
--- Memory monitoring
---
--- https://gist.github.com/JesterXL/5615023
-----
-local monitorMem = function()
-
-  collectgarbage()
-  local sysMem = collectgarbage("count") * 0.001
-  local textMem = system.getInfo("textureMemoryUsed") / 1000000
-   memoryText.text = "M: " .. math.round(sysMem*100)*0.1 .. " T: " .. math.round(textMem*100)*0.1
-end
-
-Runtime:addEventListener( "enterFrame", monitorMem )
 
 -- -----------------------------------------------------------------------------------
 -- Scene event function listeners
