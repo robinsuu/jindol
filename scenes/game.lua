@@ -15,6 +15,7 @@ local scene = composer.newScene()
 -- Requires
 ----
 local physics = require("physics")
+local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
 local sections = require("scripts.levelsections")
 
 ----
@@ -22,7 +23,7 @@ local sections = require("scripts.levelsections")
 ----
 physics.start()
 physics.setGravity(0, 9.8) -- Default: Earth gravity (0, 9.8)
-physics.setDrawMode("normal")
+physics.setDrawMode("hybrid")
 
 ----
 -- Forward declarations
@@ -39,9 +40,15 @@ local mRand = math.random
 local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
+local hero
 local memoryText -- Used for memory monitoring
 local lastGround -- Values: "hole", "normal". To keep track of the previous type of ground section
 local gameSpeed
+
+----
+-- Animations
+----
+local sheetOptions_heroRunning, sheet_heroRunning, sequences_heroRunning
 
 ----
 -- Tables
@@ -118,13 +125,12 @@ local function displayGroundBlock(xPos)
 		newTile = display.newImageRect(groundGroup, nextTile.path, nextTile.w, nextTile.h)
 		newTile.x = xPos
 		newTile.y = nextTile.y
+		physics.addBody(newTile, "static", { bounce=0, density=10 })
 	else -- If not solid, insert a blank
 		newTile = display.newRect(groundGroup, xPos, nextTile.y, nextTile.w, nextTile.h)
 		newTile.alpha = 0
 	end
-
 	groundTable[#groundTable+1] = newTile -- Insert the new block into the display table
-	physics.addBody(newTile, "static", { bounce=0, density=10 })
 end
 
 local function loadGround()
@@ -135,7 +141,50 @@ local function loadGround()
 	end
 end
 
+----
+-- Animation functions
+----
+local function loadAnimations()
+	sheetOptions_heroRunning =
+	{
+		sheetContentWidth = 500,
+		sheetContentHeight = 750,
+		width = 250, -- The width of each frame
+		height = 250, -- The height of each frame
+		numFrames = 6 -- Total number of frames/images in the spritesheet
+	}
+
+	sheet_heroRunning = graphics.newImageSheet("images/hero/herorunning.png", sheetOptions_heroRunning)
+
+	-- These are the different sequences (animations) for the imagesheet
+	sequences_heroRunning =
+	{
+		{
+			name = "normalRun", -- Name to call the animation in the program
+			start = 1, -- Which frame it should start on
+			count = 6, -- How many frames that should be animated
+			time = 400, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
+			loopCount = 0, -- Number of times to loop (0 means infinite)
+			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
+		}
+	}
+end
+
+local function loadHero()
+	hero = display.newSprite(sheet_heroRunning, sequences_heroRunning)
+	hero.x = 300
+	hero.y = display.contentHeight-100
+	hero:play()
+
+	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
+	hero.isFixedRotation = true
+end
+
 local function createRandomSection()
+	nextGroundTable = sections:normalGround()
+	lastGround = "normal"
+
+	--[[ Uncomment for default
 	if(mRand(2) == 1) then 
 		nextGroundTable = sections:normalGround()
 		lastGround = "normal"
@@ -146,6 +195,7 @@ local function createRandomSection()
 		nextGroundTable = sections:normalGround()
 		lastGround = "normal"
 	end
+	--]]
 end
 
 ----
@@ -230,7 +280,6 @@ local function gameLoop(event)
 end
 
 local function loadEventListeners()
-	
 end
 
 local function loadTimers()
@@ -262,6 +311,8 @@ function scene:create(event)
 	loadScenery()
 	loadGround()
 	loadMemoryMonitor()
+	loadAnimations()
+	loadHero()
 end
 
 -- show()

@@ -34,7 +34,7 @@ function hole()
 		{
 			type="hole",
 			y=display.contentHeight-32, 
-			path="images/ground/groundtile1.png",
+			path="",
 			w=64, 
 			h=64
 		}
