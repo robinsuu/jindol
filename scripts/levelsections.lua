@@ -11,9 +11,7 @@ module(..., package.seeall)
 local sectionTable = {}
 
 function normalGround()
-	--local test = number
-	--print(type(test))
-	for i=0, 19, 1 do
+	for i=0, 19, 1 do -- Default 19
 		local properties =
 		{
 			type="solid",
@@ -29,7 +27,7 @@ function normalGround()
 end
 
 function hole()
-	for i=0, 10, 1 do
+	for i=0, 10, 1 do -- default 10
 		local properties =
 		{
 			type="hole",

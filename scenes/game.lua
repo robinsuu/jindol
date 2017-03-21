@@ -22,8 +22,8 @@ local sections = require("scripts.levelsections")
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 9.8) -- Default: Earth gravity (0, 9.8)
-physics.setDrawMode("hybrid")
+physics.setGravity(0, 50) -- Default: Earth gravity (0, 9.8)
+physics.setDrawMode("normal")
 
 ----
 -- Forward declarations
@@ -40,10 +40,13 @@ local mRand = math.random
 local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
+local leftTouchArea, rightTouchArea, jumpButton, dashButton
 local hero
 local memoryText -- Used for memory monitoring
 local lastGround -- Values: "hole", "normal". To keep track of the previous type of ground section
 local gameSpeed
+local isJumping, jumpTransition
+local isDashing, dashTransition
 
 ----
 -- Animations
@@ -77,6 +80,7 @@ local function initVariables()
 	groundTable = {}
 	nextGroundTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
+	isJumping = false
 end
 
 local function loadMemoryMonitor()
@@ -166,6 +170,11 @@ local function loadAnimations()
 			time = 400, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
 			loopCount = 0, -- Number of times to loop (0 means infinite)
 			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
+		},
+		{
+			name = "jump",
+			frames = { 3 },
+			loopCount = 1
 		}
 	}
 end
@@ -173,11 +182,25 @@ end
 local function loadHero()
 	hero = display.newSprite(sheet_heroRunning, sequences_heroRunning)
 	hero.x = 300
-	hero.y = display.contentHeight-100
+	hero.y = contH-200
 	hero:play()
 
 	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
 	hero.isFixedRotation = true
+end
+
+local function loadTouchAreas()
+	leftTouchArea = display.newRect(uiGroup, contCX/2, contCY*1.5, contW/2, contH/1.05)
+	rightTouchArea = display.newRect(uiGroup, contCX*1.5, contCY*1.5, contW/2, contH/1.05)
+	leftTouchArea.alpha = 0
+	leftTouchArea.isHitTestable = true
+	rightTouchArea.alpha = 0
+	rightTouchArea.isHitTestable = true
+end
+
+local function loadUI()
+	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
+	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 end
 
 local function createRandomSection()
@@ -260,9 +283,54 @@ local function updateScenery()
 		print("scenery3 pos:" .. scenery3.x .. " Switch!")
 	end
 end
+
+local function performJump()
+	jumpTransition = transition.to(hero, { time=500, y=hero.y-300, transition=easing.outQuart })
+end
+
+local function jump(event)
+	local velocityX, velocityY = hero:getLinearVelocity()
+
+	-- If the character stands still it's OK to jump
+	if(velocityY == 0) then
+		isJumping = false
+	end
+
+	if(event.phase == "began" and not isJumping and velocityY == 0) then
+		isJumping = true
+		performJump()
+	end
+
+	if(event.phase == "ended" or event.phase == "cancelled") then
+		transition.cancel(jumpTransition)
+	end
+end
+
+local function dashEnding()
+	isDashing = false 
+	gameSpeed = 1
+	transition.cancel(dashTransition)
+end
+
+local function performDash()
+	gameSpeed = 6
+	dashTransition = transition.to(hero, { time=1000, y=hero.y })
+	timer.performWithDelay(1000, dashEnding, 1)
+end
+
+local function dash(event)
+	if(event.phase == "began" and not isDashing) then
+		isDashing = true
+		performDash()
+	end
+
+	if(event.phase == "ended" or event.phase == "cancelled") then
+		gameSpeed = 1
+	end
+end
+
 ----
 -- Memory monitoring
---
 -- https://gist.github.com/JesterXL/5615023
 ----
 local function monitorMemory()
@@ -280,10 +348,13 @@ local function gameLoop(event)
 end
 
 local function loadEventListeners()
+	Runtime:addEventListener("enterFrame", gameLoop)
+	leftTouchArea:addEventListener("touch", jump)
+	rightTouchArea:addEventListener("touch", dash)
 end
 
 local function loadTimers()
-	Runtime:addEventListener("enterFrame", gameLoop)
+	
 end
 
 -- -----------------------------------------------------------------------------------
@@ -300,9 +371,9 @@ function scene:create(event)
 
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
+	sceneGroup:insert(groundGroup)
 	sceneGroup:insert(uiGroup)
 	sceneGroup:insert(mainGroup)
-	sceneGroup:insert(groundGroup)
 	sceneGroup:insert(heroGroup)
 
 	initVariables()
@@ -313,6 +384,8 @@ function scene:create(event)
 	loadMemoryMonitor()
 	loadAnimations()
 	loadHero()
+	loadUI()
+	loadTouchAreas()
 end
 
 -- show()
