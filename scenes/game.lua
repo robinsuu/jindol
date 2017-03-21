@@ -47,6 +47,7 @@ local lastGround -- Values: "hole", "normal". To keep track of the previous type
 local gameSpeed
 local isJumping, jumpTransition
 local isDashing, dashTransition
+local gameOver
 
 ----
 -- Animations
@@ -81,6 +82,8 @@ local function initVariables()
 	nextGroundTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
+	isDashing = false
+	gameOver = false
 end
 
 local function loadMemoryMonitor()
@@ -204,10 +207,10 @@ local function loadUI()
 end
 
 local function createRandomSection()
-	nextGroundTable = sections:normalGround()
-	lastGround = "normal"
+	--nextGroundTable = sections:normalGround()
+	--lastGround = "normal"
 
-	--[[ Uncomment for default
+	----[[ Uncomment for default
 	if(mRand(2) == 1) then 
 		nextGroundTable = sections:normalGround()
 		lastGround = "normal"
@@ -329,6 +332,14 @@ local function dash(event)
 	end
 end
 
+local function checkHeroPosition()
+	if(hero.y > contH-64) then
+		display.newEmbossedText(uiGroup, "Game Over!", contCX, contCY, native.Systemfont, 72)
+		gameOver = true
+		hero = nil
+	end
+end
+
 ----
 -- Memory monitoring
 -- https://gist.github.com/JesterXL/5615023
@@ -344,6 +355,11 @@ local function gameLoop(event)
 	updateGround()
 	updateBackground()
 	updateScenery()
+
+	if(not gameOver) then
+		checkHeroPosition()
+	end
+
 	monitorMemory()
 end
 
