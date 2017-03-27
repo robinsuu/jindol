@@ -16,14 +16,14 @@ local scene = composer.newScene()
 ----
 local physics = require("physics")
 local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
-local sections = require("scripts.levelsections")
+local groundSheet1Info = require("images.ground.groundsheet1")
 
 ----
 -- Physics
 ----
 physics.start()
 physics.setGravity(0, 0) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
-physics.setDrawMode("hybrid")
+physics.setDrawMode("normal")
 
 ----
 -- Forward declarations
@@ -40,6 +40,7 @@ local mRand = math.random
 local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
+local ground1, ground2, ground3, ground5, ground6
 local leftTouchArea, rightTouchArea, jumpButton, dashButton
 local hero
 local memoryText -- Used for memory monitoring
@@ -57,10 +58,14 @@ local dt -- Delta time
 local sheetOptions_heroRunning, sheet_heroRunning, sequences_heroRunning
 
 ----
+-- Image sheets
+----
+local groundSheet1
+
+----
 -- Tables
 ----
-local groundTable -- Holds all the ground blocks currently on screen
-local groundBufferTable -- Holds all the ground blocks that are about to appear on screen
+local groundTable
 
 ----
 -- Display groups
@@ -88,7 +93,6 @@ end
 
 local function initVariables()
 	groundTable = {}
-	groundBufferTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
 	isDashing = false
@@ -101,6 +105,10 @@ end
 local function loadMemoryMonitor()
 	memoryText = display.newText(uiGroup, "", contW-150, 30, native.systemFont, 30)
 	memoryText:setFillColor(0,0,0)
+end
+
+local function loadImageSheets()
+	groundSheet1 = graphics.newImageSheet("images/ground/groundsheet1.png", groundSheet1Info:getSheet())
 end
 
 local function loadBackground()
@@ -132,27 +140,6 @@ local function loadScenery()
 	scenery3 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
 	scenery3.x = scenery2.x+1136
 	scenery3.y = contH-240
-end
-
-local function displayGroundBlock(xPos)
-	local nextTile = groundBufferTable[#groundBufferTable] -- Get the next block to display
-	table.remove(groundBufferTable) -- Remove the block from the table
-	
-	local newTile = nil -- What to initialize empty local variables to?
-
-	if(nextTile.type == "solid") then
-		newTile = display.newImageRect(groundGroup, nextTile.path, nextTile.w, nextTile.h)
-		newTile.x = xPos
-		newTile.y = nextTile.y
-		physics.addBody(newTile, "static", { bounce=0, density=10 })
-		newTile.myName = "ground"
-	else -- If not solid, insert a blank
-		newTile = display.newRect(groundGroup, xPos, nextTile.y, nextTile.w, nextTile.h)
-		newTile.alpha = 0
-		newTile.myName = "hole"
-	end
-	--groundTable[#groundTable+1] = newTile -- Insert the new block into the display table
-	table.insert(groundTable, newTile)
 end
 
 ----
@@ -214,70 +201,22 @@ local function loadUI()
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 end
 
-local function createGroundSection(normalGround)
-	local newTable = nil
+local function createGroundSection(xPos, yPos, name)
 
-	local randValue = mRand(2)
-
-	if(randValue == 1) then 
-		--groundBufferTable = sections:normalGround()
-		newTable = sections:normalGround()
-		lastGround = "normal"
-	elseif(lastGround ~= "hole" and randValue == 2 and not normalGround) then
-		--groundBufferTable = sections:hole()
-		newTable = sections:hole()
-		lastGround = "hole"
-	else
-		--groundBufferTable = sections:normalGround()
-		newTable = sections:normalGround()
-		lastGround = "normal"
-	end
-
-	if(groundBufferTable == not nil) then
-		for i=1, #newTable, 1 do
-			groundBufferTable[#groundBufferTable+i] = newTable[i]
-		end
-	end
 end
 
 local function loadGround()
-	groundBufferTable = sections.startingGround()
-	--lastGround = "normal"
-	--createGroundSection(true)
-	--createGroundSection(true)
-	for i=0, 49, 1 do
-		displayGroundBlock(64*i)
-	end
-	--createNormalGroundSection()
-	--groundBufferTable = sections:normalGround()
-	--createGroundSection(true)
+	ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
+	--ground1 = display.newImage(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10")) -- How to add display group?
+	ground1.x = contCX
+	ground1.y = contH-ground1.height/2
 end
 
 ----
 -- Update on tick functions
 ----
 local function updateGround()
-	-- If the groundBufferTable is empty, create a new randomly selected section
-	if(#groundBufferTable < 100) then -- This value may be tweaked (Default: if empty/0)
-		print("<<Create new ground section>>" .. " groundBufferTable length: " .. #groundBufferTable)
-		createGroundSection()
-	end
 
-	for i=#groundTable, 1, -1 do
-	--for i=1, #groundTable, 1 do
-		groundTable[i].x = groundTable[i].x - (10 * gameSpeed) * dt -- Move the block to the left Default: 5*3
-		--if(i == 1) then
-		--	groundTable[1].x = groundTable[1].x - (10 * gameSpeed) * dt
-		--else
-			--groundTable[i].x = groundTable[i-1].x + 64
-		--end
-
-		if(groundTable[i].x < -64) then -- If the block disappears from view
-			display.remove(groundTable[i])
-			table.remove(groundTable, i)
-			displayGroundBlock(groundTable[#groundTable].x + 64) -- Create and display the next block next to the one furthest away
-		end
-	end
 end
 
 local function updateBackground()
@@ -376,10 +315,6 @@ end
 
 local function performGameOver()
 	print("<<Game Over>>")
-	--display.remove(hero)
-	--hero = nil
-	--display.newEmbossedText(uiGroup, "Game Over!", contCX, contCY, native.Systemfont, 72)
-	--composer.gotoScene("scenes.mainmenu")
 	leftTouchArea:removeEventListener("touch", jump)
 	rightTouchArea:removeEventListener("touch", dash)
 	composer.showOverlay("scenes.gameover")
@@ -448,7 +383,7 @@ local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
 	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
-	Runtime:addEventListener("collision", onCollision)
+	--Runtime:addEventListener("collision", onCollision)
 end
 
 local function loadTimers()
@@ -476,6 +411,7 @@ function scene:create(event)
 
 	initVariables()
 
+	loadImageSheets()
 	loadBackground()
 	loadScenery()
 	loadGround()
