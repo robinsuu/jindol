@@ -7,7 +7,6 @@
 -----------------------------------------------------------------------------------------
 
 local composer = require("composer")
-
 local scene = composer.newScene()
 
 -- -----------------------------------------------------------------------------------
@@ -27,38 +26,37 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local titleText, tapToPlayText
+local tapToRestartText
 
 ----
 -- Display groups
 ----
-local backGroup, uiGroup
+local uiGroup
 
 ----
 -- Functions
 ----
 -- If adding more display groups, don't forget to insert them into the scene group at scene:create
 local function initDisplayGroups()
-	backGroup = display.newGroup()
 	uiGroup = display.newGroup()
 end
 
 local function loadBackground()
-	background = display.newRect(backGroup, contCX, contCY, contW, contH)
-	background:setFillColor(0.4, 0.8, 1)
+	background = display.newRect(uiGroup, contCX, contCY, contW/2, contH/2)
+	background.alpha = 0
+	background.isHitTestable = true
 end
 
 local function loadText()
-	titleText = display.newEmbossedText(uiGroup, "진돌 & 히디!", contCX, 50, native.systemFontBold, 72)
-	tapToPlayText = display.newEmbossedText(uiGroup, "Tap to play!", contCX, display.contentHeight - 50, native.systemFont, 44)
+	tapToRestartText = display.newEmbossedText(uiGroup, "Tap to restart!", contCX, display.contentHeight/2, native.systemFont, 72)
 end
 
-local function gotoGame()
-	composer.gotoScene("scenes.game")
+local function gotoMainMenu()
+	composer.gotoScene("scenes.mainmenu")
 end
 
 local function loadEventListeners()
-	background:addEventListener("tap", gotoGame)
+	background:addEventListener("tap", gotoMainMenu)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -72,7 +70,6 @@ function scene:create(event)
 	-- Code here runs when the scene is first created but has not yet appeared on screen
 
 	initDisplayGroups()
-	sceneGroup:insert(backGroup)
 	sceneGroup:insert(uiGroup)
 
 	loadBackground()
@@ -90,7 +87,7 @@ function scene:show(event)
 
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
-		composer.removeScene("scenes.game", false) -- Try false if it acts weird
+		--composer.removeScene("scenes.game", false)
 		loadEventListeners()
 	end
 end

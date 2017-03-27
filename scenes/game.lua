@@ -22,8 +22,8 @@ local sections = require("scripts.levelsections")
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 50) -- Default: Earth gravity (0, 9.8)
-physics.setDrawMode("normal")
+physics.setGravity(0, 0) -- Default: Earth gravity (0, 9.8)
+physics.setDrawMode("hybrid")
 
 ----
 -- Forward declarations
@@ -47,7 +47,9 @@ local lastGround -- Values: "hole", "normal". To keep track of the previous type
 local gameSpeed
 local isJumping, jumpTransition
 local isDashing, dashTransition
-local gameOver
+local gameOver, gameOverPerformed
+local runtime -- Game time
+local dt -- Delta time
 
 ----
 -- Animations
@@ -58,7 +60,7 @@ local sheetOptions_heroRunning, sheet_heroRunning, sequences_heroRunning
 -- Tables
 ----
 local groundTable -- Holds all the ground blocks currently on screen
-local nextGroundTable -- Holds all the ground blocks that are about to appear on screen
+local groundBufferTable -- Holds all the ground blocks that are about to appear on screen
 
 ----
 -- Display groups
@@ -77,13 +79,23 @@ local function initDisplayGroups()
 	heroGroup = display.newGroup()
 end
 
+local function getDeltaTime()
+    local temp = system.getTimer()  -- Get current game time in ms
+    local dt = (temp-runtime) / (1000/60)  -- 60 fps or 30 fps as base
+    runtime = temp  -- Store game time
+    return dt
+end
+
 local function initVariables()
 	groundTable = {}
-	nextGroundTable = {}
+	groundBufferTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
 	isDashing = false
 	gameOver = false
+	gameOverPerformed = false
+	runtime = 0
+	dt = getDeltaTime()
 end
 
 local function loadMemoryMonitor()
@@ -123,8 +135,8 @@ local function loadScenery()
 end
 
 local function displayGroundBlock(xPos)
-	local nextTile = nextGroundTable[#nextGroundTable] -- Get the next block to display
-	table.remove(nextGroundTable) -- Remove the block from the table
+	local nextTile = groundBufferTable[#groundBufferTable] -- Get the next block to display
+	table.remove(groundBufferTable) -- Remove the block from the table
 	
 	local newTile = nil -- What to initialize empty local variables to?
 
@@ -133,19 +145,14 @@ local function displayGroundBlock(xPos)
 		newTile.x = xPos
 		newTile.y = nextTile.y
 		physics.addBody(newTile, "static", { bounce=0, density=10 })
+		newTile.myName = "ground"
 	else -- If not solid, insert a blank
 		newTile = display.newRect(groundGroup, xPos, nextTile.y, nextTile.w, nextTile.h)
 		newTile.alpha = 0
+		newTile.myName = "hole"
 	end
-	groundTable[#groundTable+1] = newTile -- Insert the new block into the display table
-end
-
-local function loadGround()
-	nextGroundTable = sections.normalGround()
-	lastGround = "normal"
-	for i=0, 19, 1 do
-		displayGroundBlock(64*i)
-	end
+	--groundTable[#groundTable+1] = newTile -- Insert the new block into the display table
+	table.insert(groundTable, newTile)
 end
 
 ----
@@ -183,9 +190,10 @@ local function loadAnimations()
 end
 
 local function loadHero()
-	hero = display.newSprite(sheet_heroRunning, sequences_heroRunning)
+	hero = display.newSprite(heroGroup, sheet_heroRunning, sequences_heroRunning)
 	hero.x = 300
 	hero.y = contH-200
+	hero.myName = "hero"
 	hero:play()
 
 	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
@@ -206,36 +214,63 @@ local function loadUI()
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 end
 
-local function createRandomSection()
-	--nextGroundTable = sections:normalGround()
-	--lastGround = "normal"
+local function createGroundSection(normalGround)
+	local newTable = nil
 
-	----[[ Uncomment for default
-	if(mRand(2) == 1) then 
-		nextGroundTable = sections:normalGround()
+	local randValue = mRand(2)
+
+	if(randValue == 1) then 
+		--groundBufferTable = sections:normalGround()
+		newTable = sections:normalGround()
 		lastGround = "normal"
-	elseif(lastGround ~= "hole") then
-		nextGroundTable = sections:hole()
+	elseif(lastGround ~= "hole" and randValue == 2 and not normalGround) then
+		--groundBufferTable = sections:hole()
+		newTable = sections:hole()
 		lastGround = "hole"
 	else
-		nextGroundTable = sections:normalGround()
+		--groundBufferTable = sections:normalGround()
+		newTable = sections:normalGround()
 		lastGround = "normal"
 	end
-	--]]
+
+	if(groundBufferTable == not nil) then
+		for i=1, #newTable, 1 do
+			groundBufferTable[#groundBufferTable+i] = newTable[i]
+		end
+	end
+end
+
+local function loadGround()
+	groundBufferTable = sections.startingGround()
+	--lastGround = "normal"
+	--createGroundSection(true)
+	--createGroundSection(true)
+	for i=0, 49, 1 do
+		displayGroundBlock(64*i)
+	end
+	--createNormalGroundSection()
+	--groundBufferTable = sections:normalGround()
+	--createGroundSection(true)
 end
 
 ----
 -- Update on tick functions
 ----
 local function updateGround()
-	-- If the nextGroundTable is empty, create a new randomly selected section
-	if(#nextGroundTable == 0) then
-		print("<<Create new ground section>>")
-		createRandomSection()
+	-- If the groundBufferTable is empty, create a new randomly selected section
+	if(#groundBufferTable < 100) then -- This value may be tweaked (Default: if empty/0)
+		print("<<Create new ground section>>" .. " groundBufferTable length: " .. #groundBufferTable)
+		createGroundSection()
 	end
 
 	for i=#groundTable, 1, -1 do
-		groundTable[i].x = groundTable[i].x - (10 * gameSpeed) -- Move the block to the left Default: 5*3
+	--for i=1, #groundTable, 1 do
+		groundTable[i].x = groundTable[i].x - (10 * gameSpeed) * dt -- Move the block to the left Default: 5*3
+		--if(i == 1) then
+		--	groundTable[1].x = groundTable[1].x - (10 * gameSpeed) * dt
+		--else
+			--groundTable[i].x = groundTable[i-1].x + 64
+		--end
 
 		if(groundTable[i].x < -64) then -- If the block disappears from view
 			display.remove(groundTable[i])
@@ -246,44 +281,44 @@ local function updateGround()
 end
 
 local function updateBackground()
-	clouds1.x = clouds1.x - (1 * gameSpeed)
-	clouds2.x = clouds2.x - (1 * gameSpeed)
-	clouds3.x = clouds3.x - (1 * gameSpeed)
+	clouds1.x = clouds1.x - (1 * gameSpeed) * dt
+	clouds2.x = clouds2.x - (1 * gameSpeed) * dt
+	clouds3.x = clouds3.x - (1 * gameSpeed) * dt
 
 	if(clouds1.x < -414) then
 		clouds1.x = clouds3.x + 828
-		print("clouds1 pos:" .. clouds1.x .. " Switch!")
+		--print("clouds1 pos:" .. clouds1.x .. " Switch!")
 	end
 
 	if(clouds2.x < -414) then
 		clouds2.x = clouds1.x + 828
-		print("clouds2 pos:" .. clouds2.x .. " Switch!")
+		--print("clouds2 pos:" .. clouds2.x .. " Switch!")
 	end
 
 	if(clouds3.x < -414) then
 		clouds3.x = clouds2.x + 828
-		print("clouds3 pos:" .. clouds3.x .. " Switch!")
+		--print("clouds3 pos:" .. clouds3.x .. " Switch!")
 	end
 end
 
 local function updateScenery()
-	scenery1.x = scenery1.x - (3 * gameSpeed)
-	scenery2.x = scenery2.x - (3 * gameSpeed)
-	scenery3.x = scenery3.x - (3 * gameSpeed)
+	scenery1.x = scenery1.x - (3 * gameSpeed) * dt
+	scenery2.x = scenery2.x - (3 * gameSpeed)* dt
+	scenery3.x = scenery3.x - (3 * gameSpeed) * dt
 
 	if(scenery1.x < -568) then
 		scenery1.x = scenery3.x + 1136
-		print("scenery1 pos:" .. scenery1.x .. " Switch!")
+		--print("scenery1 pos:" .. scenery1.x .. " Switch!")
 	end
 
 	if(scenery2.x < -568) then
 		scenery2.x = scenery1.x + 1136
-		print("scenery2 pos:" .. scenery2.x .. " Switch!")
+		--print("scenery2 pos:" .. scenery2.x .. " Switch!")
 	end
 
 	if(scenery3.x < -568) then
 		scenery3.x = scenery2.x + 1136
-		print("scenery3 pos:" .. scenery3.x .. " Switch!")
+		--print("scenery3 pos:" .. scenery3.x .. " Switch!")
 	end
 end
 
@@ -316,7 +351,7 @@ local function dashEnding()
 end
 
 local function performDash()
-	gameSpeed = 6
+	gameSpeed = 10
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	timer.performWithDelay(1000, dashEnding, 1)
 end
@@ -328,16 +363,27 @@ local function dash(event)
 	end
 
 	if(event.phase == "ended" or event.phase == "cancelled") then
-		gameSpeed = 1
+		dashEnding()
 	end
 end
 
 local function checkHeroPosition()
+	--print(hero.y)
 	if(hero.y > contH-64) then
-		display.newEmbossedText(uiGroup, "Game Over!", contCX, contCY, native.Systemfont, 72)
 		gameOver = true
-		hero = nil
 	end
+end
+
+local function performGameOver()
+	print("<<Game Over>>")
+	--display.remove(hero)
+	--hero = nil
+	--display.newEmbossedText(uiGroup, "Game Over!", contCX, contCY, native.Systemfont, 72)
+	--composer.gotoScene("scenes.mainmenu")
+	leftTouchArea:removeEventListener("touch", jump)
+	rightTouchArea:removeEventListener("touch", dash)
+	composer.showOverlay("scenes.gameover")
+	gameOverPerformed = true
 end
 
 ----
@@ -345,28 +391,64 @@ end
 -- https://gist.github.com/JesterXL/5615023
 ----
 local function monitorMemory()
-  collectgarbage()
-  local sysMem = collectgarbage("count") * 0.001
-  local textMem = system.getInfo("textureMemoryUsed") / 1000000
-   memoryText.text = "M: " .. math.round(sysMem*10)*0.1 .. " T: " .. math.round(textMem*10)*0.1
+  	collectgarbage()
+  	local sysMem = collectgarbage("count") * 0.001
+  	local textMem = system.getInfo("textureMemoryUsed") / 1000000
+	memoryText.text = "M: " .. math.round(sysMem*10)*0.1 .. " T: " .. math.round(textMem*10)*0.1
 end
 
 local function gameLoop(event)
-	updateGround()
-	updateBackground()
-	updateScenery()
-
 	if(not gameOver) then
 		checkHeroPosition()
+		dt = getDeltaTime()
+		updateGround()
+		updateBackground()
+		updateScenery()
+	elseif(gameOver and not gameOverPerformed) then
+		--physics.pause()
+		--Runtime:removeEventListener("enterFrame", gameLoop) -- This needs to be removed before game over (though, should it be removed in will hide? or here?)
+		performGameOver()
 	end
 
 	monitorMemory()
+end
+
+----
+-- Returns true if the two specified objects collided
+--
+-- obj1, obj2: the two objects that collided
+-- name1, name2: the name of the two objects to check
+----
+local function didCollide(obj1, obj2, name1, name2)
+	local collided = false
+
+	if((obj1.myName == name1 and obj2.myName == name2) or 
+		(obj1.myName == name2 and obj2.myName == name1))
+	then
+		collided = true
+	else
+		collided = false
+	end
+
+	return collided
+end
+
+local function onCollision(event)
+	if(event.phase == "began") then
+		local obj1 = event.object1
+		local obj2 = event.object2
+
+		if(didCollide(obj1, obj2, "hero", "ground")) then
+			print("<<Ground and hero collided!>>")
+		end
+	end
 end
 
 local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
 	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
+	Runtime:addEventListener("collision", onCollision)
 end
 
 local function loadTimers()
@@ -383,7 +465,7 @@ function scene:create(event)
 	local sceneGroup = self.view
 	-- Code here runs when the scene is first created but has not yet appeared on screen
 
-	physics.pause() -- Pause physics while everything initializes
+	--physics.pause() -- Pause physics while everything initializes
 
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
@@ -429,10 +511,11 @@ function scene:hide(event)
 
 	if (phase == "will") then
 		-- Code here runs when the scene is on screen (but is about to go off screen)
-
+		physics.pause()
+		Runtime:removeEventListener("enterFrame", gameLoop)
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
-
+		--physics.stop()
 	end
 end
 
