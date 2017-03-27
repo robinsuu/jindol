@@ -51,7 +51,7 @@ function hole()
 			type="hole",
 			y=display.contentHeight-32, 
 			path="",
-			w=128, 
+			w=64, 
 			h=64
 		}
 		sectionTable[#sectionTable+1] = properties

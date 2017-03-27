@@ -81,9 +81,9 @@ end
 
 local function getDeltaTime()
     local temp = system.getTimer()  -- Get current game time in ms
-    local dt = (temp-runtime) / (1000/60)  -- 60 fps or 30 fps as base
+    local deltaTime = (temp-runtime) / (1000/60)  -- 60 fps or 30 fps as base
     runtime = temp  -- Store game time
-    return dt
+    return deltaTime
 end
 
 local function initVariables()
