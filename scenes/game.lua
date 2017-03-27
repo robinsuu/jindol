@@ -22,7 +22,7 @@ local sections = require("scripts.levelsections")
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 0) -- Default: Earth gravity (0, 9.8)
+physics.setGravity(0, 0) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
 physics.setDrawMode("hybrid")
 
 ----
