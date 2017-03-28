@@ -16,13 +16,12 @@ local scene = composer.newScene()
 ----
 local physics = require("physics")
 local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
-local groundSheet1Info = require("images.ground.groundsheet1")
 
 ----
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 0) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
+physics.setGravity(0, 9.8) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
 physics.setDrawMode("normal")
 
 ----
@@ -40,11 +39,10 @@ local mRand = math.random
 local background
 local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
-local ground1, ground2, ground3, ground5, ground6
+local foreground1, foreground2, foreground3
 local leftTouchArea, rightTouchArea, jumpButton, dashButton
 local hero
 local memoryText -- Used for memory monitoring
-local lastGround -- Values: "hole", "normal". To keep track of the previous type of ground section
 local gameSpeed
 local isJumping, jumpTransition
 local isDashing, dashTransition
@@ -55,17 +53,17 @@ local dt -- Delta time
 ----
 -- Animations
 ----
-local sheetOptions_heroRunning, sheet_heroRunning, sequences_heroRunning
+local sheetOptions_hero, sheet_hero, sequences_hero
 
 ----
 -- Image sheets
 ----
-local groundSheet1
 
 ----
 -- Tables
 ----
-local groundTable
+local groundSections
+local currentGround
 
 ----
 -- Display groups
@@ -92,7 +90,6 @@ local function getDeltaTime()
 end
 
 local function initVariables()
-	groundTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
 	isDashing = false
@@ -102,13 +99,38 @@ local function initVariables()
 	dt = getDeltaTime()
 end
 
+local function initGroundSections()
+	groundSections = {
+		["middle"] = {
+			file = "images/ground/middle.png",
+			width = 275,
+			height = 25,
+			y = contH-25/2
+		},
+		["left"] = {
+			file = "images/ground/leftedge.png",
+			width = 275,
+			height = 25,
+			y = contH-25/2
+		},
+		["right"] = {
+			file = "images/ground/rightedge.png",
+			width = 275,
+			height = 25,
+			y = contH-25/2
+		},
+		["hole"] = {
+			file = "images/ground/hole.png",
+			width = 275,
+			height = 25,
+			y = contH-25/2
+		}
+	}
+end
+
 local function loadMemoryMonitor()
 	memoryText = display.newText(uiGroup, "", contW-150, 30, native.systemFont, 30)
 	memoryText:setFillColor(0,0,0)
-end
-
-local function loadImageSheets()
-	groundSheet1 = graphics.newImageSheet("images/ground/groundsheet1.png", groundSheet1Info:getSheet())
 end
 
 local function loadBackground()
@@ -129,61 +151,79 @@ local function loadBackground()
 end
 
 local function loadScenery()
-	scenery1 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery1 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 485)
 	scenery1.x = contCX
 	scenery1.y = contH-240
 
-	scenery2 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery2 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 485)
 	scenery2.x = scenery1.x+1136
 	scenery2.y = contH-240
 
-	scenery3 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 495)
+	scenery3 = display.newImageRect(backGroup, "images/background/icecreambg.png", 1136, 485)
 	scenery3.x = scenery2.x+1136
 	scenery3.y = contH-240
+end
+
+local function loadForeground()
+	foreground1 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
+	foreground1.x = contCX
+	foreground1.y = contH-100
+
+	foreground2 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
+	foreground2.x =	foreground1.x+1136
+	foreground2.y = contH-100
+
+	foreground3 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
+	foreground3.x = foreground2.x+1136
+	foreground3.y = contH-100
 end
 
 ----
 -- Animation functions
 ----
 local function loadAnimations()
-	sheetOptions_heroRunning =
+	sheetOptions_hero =
 	{
-		sheetContentWidth = 500,
-		sheetContentHeight = 750,
+		sheetContentWidth = 2000,
+		sheetContentHeight = 1000,
 		width = 250, -- The width of each frame
 		height = 250, -- The height of each frame
-		numFrames = 6 -- Total number of frames/images in the spritesheet
+		numFrames = 30 -- Total number of frames/images in the spritesheet
 	}
 
-	sheet_heroRunning = graphics.newImageSheet("images/hero/herorunning.png", sheetOptions_heroRunning)
+	sheet_hero = graphics.newImageSheet("images/hero/hero.png", sheetOptions_hero)
 
 	-- These are the different sequences (animations) for the imagesheet
-	sequences_heroRunning =
+	sequences_hero =
 	{
 		{
 			name = "normalRun", -- Name to call the animation in the program
-			start = 1, -- Which frame it should start on
-			count = 6, -- How many frames that should be animated
-			time = 400, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
+			start = 21, -- Which frame it should start on
+			count = 10, -- How many frames that should be animated
+			--time = 200, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
 			loopCount = 0, -- Number of times to loop (0 means infinite)
 			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
 		},
 		{
 			name = "jump",
-			frames = { 3 },
-			loopCount = 1
+			start = 1,
+			count = 20,
+			time = 1000,
+			loopCount = 0
 		}
 	}
 end
 
 local function loadHero()
-	hero = display.newSprite(heroGroup, sheet_heroRunning, sequences_heroRunning)
+	hero = display.newSprite(heroGroup, sheet_hero, sequences_hero)
 	hero.x = 300
 	hero.y = contH-200
 	hero.myName = "hero"
+	--hero:setSequence("jump")
 	hero:play()
 
-	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
+	--physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
+	physics.addBody(hero, "dynamic", { bounce=0, radius=109 })
 	hero.isFixedRotation = true
 end
 
@@ -201,15 +241,24 @@ local function loadUI()
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 end
 
-local function createGroundSection(xPos, yPos, name)
-
+local function createGroundSection(name, xPos)
+	local section = groundSections[name]
+	local newObj = display.newImageRect(groundGroup, section.file, section.width, section.height)
+	newObj.x = xPos
+	newObj.y = section.y 
+	physics.addBody(newObj, "static", { bounce=0 })
 end
 
 local function loadGround()
-	ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
-	--ground1 = display.newImage(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10")) -- How to add display group?
-	ground1.x = contCX
-	ground1.y = contH-ground1.height/2
+	createGroundSection("middle", 0)
+	createGroundSection("middle", 275)
+	createGroundSection("middle", 550)
+	createGroundSection("middle", 825)
+	createGroundSection("middle", 1100)
+	createGroundSection("middle", 1375)
+	--ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
+	--ground1.x = contCX
+	--ground1.y = contH-ground1.height/2
 end
 
 ----
@@ -257,6 +306,27 @@ local function updateScenery()
 
 	if(scenery3.x < -568) then
 		scenery3.x = scenery2.x + 1136
+		--print("scenery3 pos:" .. scenery3.x .. " Switch!")
+	end
+end
+
+local function updateForeground()
+	foreground1.x = foreground1.x - (5 * gameSpeed) * dt
+	foreground2.x = foreground2.x - (5 * gameSpeed)* dt
+	foreground3.x = foreground3.x - (5 * gameSpeed) * dt
+
+	if(foreground1.x < -568) then
+		foreground1.x = foreground3.x + 1136
+		--print("scenery1 pos:" .. scenery1.x .. " Switch!")
+	end
+
+	if(foreground2.x < -568) then
+		foreground2.x = foreground1.x + 1136
+		--print("scenery2 pos:" .. scenery2.x .. " Switch!")
+	end
+
+	if(foreground3.x < -568) then
+		foreground3.x = foreground2.x + 1136
 		--print("scenery3 pos:" .. scenery3.x .. " Switch!")
 	end
 end
@@ -315,8 +385,8 @@ end
 
 local function performGameOver()
 	print("<<Game Over>>")
-	leftTouchArea:removeEventListener("touch", jump)
-	rightTouchArea:removeEventListener("touch", dash)
+	leftTouchArea:removeEventListener("tap", jump)
+	rightTouchArea:removeEventListener("tap", dash)
 	composer.showOverlay("scenes.gameover")
 	gameOverPerformed = true
 end
@@ -338,6 +408,7 @@ local function gameLoop(event)
 		dt = getDeltaTime()
 		updateGround()
 		updateBackground()
+		updateForeground()
 		updateScenery()
 	elseif(gameOver and not gameOverPerformed) then
 		--physics.pause()
@@ -410,10 +481,11 @@ function scene:create(event)
 	sceneGroup:insert(heroGroup)
 
 	initVariables()
+	initGroundSections()
 
-	loadImageSheets()
 	loadBackground()
 	loadScenery()
+	loadForeground()
 	loadGround()
 	loadMemoryMonitor()
 	loadAnimations()
