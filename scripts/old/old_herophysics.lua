@@ -28,37 +28,13 @@ function M.physicsData(scale)
                     {
                     pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
                     filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   -39.5, -52  ,  -102.5, 16  ,  -99.5, -24  ,  -63.5, -70  ,  -34, -75.5  }
+                    shape = {   41.5, 37  ,  -1, -103.5  ,  40, -103.5  ,  114.5, -13  }
                     }
                      ,
                     {
                     pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
                     filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   -36.5, 70  ,  54, 10.5  ,  12, 71.5  ,  -36, 98.5  ,  -44.5, 84  }
-                    }
-                     ,
-                    {
-                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
-                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   12, 71.5  ,  54, 10.5  ,  46, 109  ,  21, 109  }
-                    }
-                     ,
-                    {
-                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
-                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   46.5, -106  ,  88.5, -58  ,  87, -31  ,  54, 10.5  ,  31, -82.5  ,  36.5, -106  }
-                    }
-                     ,
-                    {
-                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
-                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   -102.5, 16  ,  -39.5, -52  ,  -22.5, -33  ,  -36.5, 70  ,  -84, 53.5  }
-                    }
-                     ,
-                    {
-                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, 
-                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
-                    shape = {   -36.5, 70  ,  -22.5, -33  ,  -5, -113.5  ,  -4, -113.5  ,  31, -82.5  ,  54, 10.5  }
+                    shape = {   -1, -103.5  ,  41.5, 37  ,  46.5, 75  ,  1, 115.5  ,  -59, 114.5  ,  -104.5, -15  }
                     }
                     
                     

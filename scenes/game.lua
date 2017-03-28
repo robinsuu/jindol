@@ -21,7 +21,7 @@ local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 9.8) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
+physics.setGravity(0, 200) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
 physics.setDrawMode("normal")
 
 ----
@@ -63,7 +63,7 @@ local sheetOptions_hero, sheet_hero, sequences_hero
 -- Tables
 ----
 local groundSections
-local currentGround
+local groundTable
 
 ----
 -- Display groups
@@ -90,6 +90,7 @@ local function getDeltaTime()
 end
 
 local function initVariables()
+	groundTable = {}
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
 	isDashing = false
@@ -167,15 +168,15 @@ end
 local function loadForeground()
 	foreground1 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
 	foreground1.x = contCX
-	foreground1.y = contH-100
+	foreground1.y = contH-90
 
 	foreground2 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
 	foreground2.x =	foreground1.x+1136
-	foreground2.y = contH-100
+	foreground2.y = contH-90
 
 	foreground3 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
 	foreground3.x = foreground2.x+1136
-	foreground3.y = contH-100
+	foreground3.y = contH-90
 end
 
 ----
@@ -200,7 +201,8 @@ local function loadAnimations()
 			name = "normalRun", -- Name to call the animation in the program
 			start = 21, -- Which frame it should start on
 			count = 10, -- How many frames that should be animated
-			--time = 200, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
+			--frames = { 21, 23, 25, 27 },
+			--time = 50, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
 			loopCount = 0, -- Number of times to loop (0 means infinite)
 			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
 		},
@@ -222,8 +224,8 @@ local function loadHero()
 	--hero:setSequence("jump")
 	hero:play()
 
-	--physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
-	physics.addBody(hero, "dynamic", { bounce=0, radius=109 })
+	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
+	--physics.addBody(hero, "dynamic", { bounce=0, radius=109 })
 	hero.isFixedRotation = true
 end
 
@@ -241,21 +243,23 @@ local function loadUI()
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 end
 
-local function createGroundSection(name, xPos)
+local function createGroundSection(name)
 	local section = groundSections[name]
 	local newObj = display.newImageRect(groundGroup, section.file, section.width, section.height)
-	newObj.x = xPos
+	if(#groundTable == 0) then -- This is needed to load the first section
+		newObj.x = 0
+	else
+		newObj.x = groundTable[#groundTable].x + 275 -- This number should be the full width of the ground sections
+	end
 	newObj.y = section.y 
 	physics.addBody(newObj, "static", { bounce=0 })
+	table.insert(groundTable, newObj)
 end
 
 local function loadGround()
-	createGroundSection("middle", 0)
-	createGroundSection("middle", 275)
-	createGroundSection("middle", 550)
-	createGroundSection("middle", 825)
-	createGroundSection("middle", 1100)
-	createGroundSection("middle", 1375)
+	for i=1, 100, 1 do
+		createGroundSection("middle")
+	end
 	--ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
 	--ground1.x = contCX
 	--ground1.y = contH-ground1.height/2
@@ -265,7 +269,14 @@ end
 -- Update on tick functions
 ----
 local function updateGround()
+	for i=#groundTable, 1, -1 do
+		local section = groundTable[i]
+		section.x = section.x - (8 * gameSpeed) * dt
 
+		--if(section.x < - (section.x * 2)) then
+		--	print("gone!")
+		--end
+	end
 end
 
 local function updateBackground()
@@ -290,9 +301,9 @@ local function updateBackground()
 end
 
 local function updateScenery()
-	scenery1.x = scenery1.x - (3 * gameSpeed) * dt
-	scenery2.x = scenery2.x - (3 * gameSpeed)* dt
-	scenery3.x = scenery3.x - (3 * gameSpeed) * dt
+	scenery1.x = scenery1.x - (2 * gameSpeed) * dt
+	scenery2.x = scenery2.x - (2 * gameSpeed)* dt
+	scenery3.x = scenery3.x - (2 * gameSpeed) * dt
 
 	if(scenery1.x < -568) then
 		scenery1.x = scenery3.x + 1136
@@ -311,9 +322,9 @@ local function updateScenery()
 end
 
 local function updateForeground()
-	foreground1.x = foreground1.x - (5 * gameSpeed) * dt
-	foreground2.x = foreground2.x - (5 * gameSpeed)* dt
-	foreground3.x = foreground3.x - (5 * gameSpeed) * dt
+	foreground1.x = foreground1.x - (3 * gameSpeed) * dt
+	foreground2.x = foreground2.x - (3 * gameSpeed)* dt
+	foreground3.x = foreground3.x - (3 * gameSpeed) * dt
 
 	if(foreground1.x < -568) then
 		foreground1.x = foreground3.x + 1136
@@ -332,7 +343,7 @@ local function updateForeground()
 end
 
 local function performJump()
-	jumpTransition = transition.to(hero, { time=500, y=hero.y-300, transition=easing.outQuart })
+	jumpTransition = transition.to(hero, { time=200, y=hero.y-300, transition=easing.outQuart })
 end
 
 local function jump(event)
@@ -360,9 +371,9 @@ local function dashEnding()
 end
 
 local function performDash()
-	gameSpeed = 10
-	dashTransition = transition.to(hero, { time=1000, y=hero.y })
-	timer.performWithDelay(1000, dashEnding, 1)
+	gameSpeed = 5
+	dashTransition = transition.to(hero, { time=500, y=hero.y })
+	timer.performWithDelay(500, dashEnding, 1)
 end
 
 local function dash(event)
