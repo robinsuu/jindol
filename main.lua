@@ -9,7 +9,7 @@
 local composer = require("composer")
 
 composer.isDebug = true -- Turn off on release
---composer.recycleOnSceneChange = true -- Try setting this if strange things happen with composer scene changes
+composer.recycleOnSceneChange = true -- Try setting this if strange things happen with composer scene changes
 
 display.setStatusBar(display.HiddenStatusBar)
 system.activate("multitouch")

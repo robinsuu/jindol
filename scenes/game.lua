@@ -21,7 +21,7 @@ local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 200) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
+physics.setGravity(0, 120) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
 physics.setDrawMode("normal")
 
 ----
@@ -49,6 +49,10 @@ local isDashing, dashTransition
 local gameOver, gameOverPerformed
 local runtime -- Game time
 local dt -- Delta time
+local groundBuffer -- The number of ground sections to be loaded at once
+local lastGroundType
+local metersRun
+local meterText
 
 ----
 -- Animations
@@ -91,6 +95,8 @@ end
 
 local function initVariables()
 	groundTable = {}
+	groundBuffer = 10
+	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
 	isDashing = false
@@ -98,33 +104,34 @@ local function initVariables()
 	gameOverPerformed = false
 	runtime = 0
 	dt = getDeltaTime()
+	metersRun = 0
 end
 
 local function initGroundSections()
 	groundSections = {
-		["middle"] = {
+		["middleGround"] = {
 			file = "images/ground/middle.png",
-			width = 275,
-			height = 25,
-			y = contH-25/2
+			width = 320,
+			height = 64,
+			y = contH-64/2
 		},
-		["left"] = {
+		["leftGround"] = {
 			file = "images/ground/leftedge.png",
-			width = 275,
-			height = 25,
-			y = contH-25/2
+			width = 320,
+			height = 64,
+			y = contH-64/2
 		},
-		["right"] = {
+		["rightGround"] = {
 			file = "images/ground/rightedge.png",
-			width = 275,
-			height = 25,
-			y = contH-25/2
+			width = 320,
+			height = 64,
+			y = contH-64/2
 		},
 		["hole"] = {
 			file = "images/ground/hole.png",
-			width = 275,
-			height = 25,
-			y = contH-25/2
+			width = 320,
+			height = 64,
+			y = contH-64/2
 		}
 	}
 end
@@ -207,11 +214,18 @@ local function loadAnimations()
 			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
 		},
 		{
-			name = "jump",
+			name = "jumpUp",
 			start = 1,
-			count = 20,
-			time = 1000,
-			loopCount = 0
+			count = 12,
+			--time = 1000,
+			loopCount = 1
+		},
+		{
+			name = "jumpDown",
+			start = 13,
+			count = 8,
+			time = 400, -- This must be tweaked, or replaced with a transition
+			loopCount = 1
 		}
 	}
 end
@@ -221,12 +235,13 @@ local function loadHero()
 	hero.x = 300
 	hero.y = contH-200
 	hero.myName = "hero"
-	--hero:setSequence("jump")
+	--hero:setSequence("normalRun")
 	hero:play()
 
 	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
 	--physics.addBody(hero, "dynamic", { bounce=0, radius=109 })
 	hero.isFixedRotation = true
+	hero.isSleepingAllowed = false
 end
 
 local function loadTouchAreas()
@@ -241,24 +256,52 @@ end
 local function loadUI()
 	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
+	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
 end
 
 local function createGroundSection(name)
 	local section = groundSections[name]
 	local newObj = display.newImageRect(groundGroup, section.file, section.width, section.height)
+	newObj.myName = name
 	if(#groundTable == 0) then -- This is needed to load the first section
 		newObj.x = 0
 	else
-		newObj.x = groundTable[#groundTable].x + 275 -- This number should be the full width of the ground sections
+		newObj.x = groundTable[#groundTable].x + 320 -- This number should be the full width of the ground sections
 	end
 	newObj.y = section.y 
-	physics.addBody(newObj, "static", { bounce=0 })
+
+	if(name ~= "hole") then
+		physics.addBody(newObj, "static", { bounce=0 })
+	end
+
 	table.insert(groundTable, newObj)
 end
 
+local function createRandomGroundSection()
+	if(lastGroundType == "hole") then
+		createGroundSection("leftGround")
+		lastGroundType = "leftGround"
+		print(">> left ground")
+	elseif(lastGroundType == "leftGround" or lastGroundType == "middleGround") then
+		if(mRand(4) == 1) then
+			createGroundSection("rightGround")
+			lastGroundType = "rightGround"
+			print(">> right ground")
+		else
+			createGroundSection("middleGround")
+			lastGroundType = "middleGround"
+			print(">> middle ground")
+		end
+	elseif(lastGroundType == "rightGround") then
+		lastGroundType = "hole"
+		createGroundSection("hole")
+		print(">> hole")
+	end
+end
+
 local function loadGround()
-	for i=1, 100, 1 do
-		createGroundSection("middle")
+	for i=1, groundBuffer, 1 do
+		createGroundSection("middleGround")
 	end
 	--ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
 	--ground1.x = contCX
@@ -271,11 +314,12 @@ end
 local function updateGround()
 	for i=#groundTable, 1, -1 do
 		local section = groundTable[i]
-		section.x = section.x - (8 * gameSpeed) * dt
+		section.x = section.x - (10 * gameSpeed) * dt
 
-		--if(section.x < - (section.x * 2)) then
-		--	print("gone!")
-		--end
+		if(section.x <= -640) then
+			table.remove(groundTable, i)
+			createRandomGroundSection()
+		end
 	end
 end
 
@@ -342,8 +386,17 @@ local function updateForeground()
 	end
 end
 
+local function updateMetersRun()
+	metersRun = metersRun + (0.05 * gameSpeed) * dt -- Meter updates depending on game speed
+	meterText.text = math.floor(metersRun) .. " meters"
+	--math.round(metersRun*10)*0.1
+end
+
 local function performJump()
-	jumpTransition = transition.to(hero, { time=200, y=hero.y-300, transition=easing.outQuart })
+	hero:setSequence("jumpUp")
+	hero:play()
+	
+	jumpTransition = transition.to(hero, { time=600, y=hero.y-300, transition=easing.outQuart })
 end
 
 local function jump(event)
@@ -360,6 +413,8 @@ local function jump(event)
 	end
 
 	if(event.phase == "ended" or event.phase == "cancelled") then
+		hero:setSequence("jumpDown")
+		hero:play()
 		transition.cancel(jumpTransition)
 	end
 end
@@ -392,6 +447,11 @@ local function checkHeroPosition()
 	if(hero.y > contH-64) then
 		gameOver = true
 	end
+
+	--if(not isJumping and hero.sequence == "jumpDown") then
+	--	hero:setSequence("normalRun")
+	--	hero:play()
+	--end
 end
 
 local function performGameOver()
@@ -421,6 +481,7 @@ local function gameLoop(event)
 		updateBackground()
 		updateForeground()
 		updateScenery()
+		updateMetersRun()
 	elseif(gameOver and not gameOverPerformed) then
 		--physics.pause()
 		--Runtime:removeEventListener("enterFrame", gameLoop) -- This needs to be removed before game over (though, should it be removed in will hide? or here?)
@@ -455,8 +516,13 @@ local function onCollision(event)
 		local obj1 = event.object1
 		local obj2 = event.object2
 
-		if(didCollide(obj1, obj2, "hero", "ground")) then
-			print("<<Ground and hero collided!>>")
+		if(didCollide(obj1, obj2, "hero", "middleGround") or didCollide(obj1, obj2, "hero", "leftGround") or didCollide(obj1, obj2, "hero", "rightGround")) then
+			--display.newText(uiGroup, "Landed", contCX, contCY, native.systemFont, 44)
+			if(hero ~= nil and (hero.sequence == "jumpDown" or hero.sequence == "jumpUp")) then
+				hero:setSequence("normalRun")
+				hero:play()
+				--isJumping = false -- Not sure if this is needed but it seems to improve the animation timing (this could also just be an illusion)
+			end
 		end
 	end
 end
@@ -465,7 +531,7 @@ local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
 	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
-	--Runtime:addEventListener("collision", onCollision)
+	Runtime:addEventListener("collision", onCollision)
 end
 
 local function loadTimers()
@@ -531,10 +597,20 @@ function scene:hide(event)
 	if (phase == "will") then
 		-- Code here runs when the scene is on screen (but is about to go off screen)
 		physics.pause()
+		Runtime:removeEventListener("collision", onCollision)
 		Runtime:removeEventListener("enterFrame", gameLoop)
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
-		--physics.stop()
+		display.remove(backGroup)
+		display.remove(groundGroup)
+		display.remove(uiGroup)
+		display.remove(mainGroup)
+		display.remove(heroGroup)
+		backGroup = nil
+		groundGroup = nil
+		uiGroup = nil
+		mainGroup = nil
+		heroGroup = nil
 	end
 end
 
