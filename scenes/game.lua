@@ -6,7 +6,7 @@
 --
 -----------------------------------------------------------------------------------------
 ----
--- Composer
+-- Composer (scene management)
 ----
 local composer = require("composer")
 local scene = composer.newScene()
@@ -44,15 +44,13 @@ local leftTouchArea, rightTouchArea, jumpButton, dashButton
 local hero
 local memoryText -- Used for memory monitoring
 local gameSpeed
-local isJumping, jumpTransition
-local isDashing, dashTransition
+local isJumping, jumpTransition, isDashing, dashTransition
 local gameOver, gameOverPerformed
-local runtime -- Game time
+local runtime -- Game time (used to calculate delta time)
 local dt -- Delta time
 local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType
-local metersRun
-local meterText
+local metersRun, meterText
 
 ----
 -- Animations
@@ -66,8 +64,8 @@ local sheetOptions_hero, sheet_hero, sequences_hero
 ----
 -- Tables
 ----
-local groundSections
-local groundTable
+local groundSections -- Holds the properties of the different ground sections
+local groundTable -- Holds the actual ground sections displayed in the world
 
 ----
 -- Display groups
@@ -108,32 +106,7 @@ local function initVariables()
 end
 
 local function initGroundSections()
-	groundSections = {
-		["middleGround"] = {
-			file = "images/ground/middle.png",
-			width = 320,
-			height = 64,
-			y = contH-64/2
-		},
-		["leftGround"] = {
-			file = "images/ground/leftedge.png",
-			width = 320,
-			height = 64,
-			y = contH-64/2
-		},
-		["rightGround"] = {
-			file = "images/ground/rightedge.png",
-			width = 320,
-			height = 64,
-			y = contH-64/2
-		},
-		["hole"] = {
-			file = "images/ground/hole.png",
-			width = 320,
-			height = 64,
-			y = contH-64/2
-		}
-	}
+	groundSections = require("scripts.groundsections")
 end
 
 local function loadMemoryMonitor()
@@ -201,15 +174,12 @@ local function loadAnimations()
 
 	sheet_hero = graphics.newImageSheet("images/hero/hero.png", sheetOptions_hero)
 
-	-- These are the different sequences (animations) for the imagesheet
 	sequences_hero =
 	{
 		{
-			name = "normalRun", -- Name to call the animation in the program
-			start = 21, -- Which frame it should start on
+			name = "normalRun",
+			start = 21,
 			count = 10, -- How many frames that should be animated
-			--frames = { 21, 23, 25, 27 },
-			--time = 50, -- The total time of the animation from start to stop in milliseconds (1000 = 1 second)
 			loopCount = 0, -- Number of times to loop (0 means infinite)
 			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
 		},
@@ -217,7 +187,6 @@ local function loadAnimations()
 			name = "jumpUp",
 			start = 1,
 			count = 12,
-			--time = 1000,
 			loopCount = 1
 		},
 		{
@@ -232,16 +201,14 @@ end
 
 local function loadHero()
 	hero = display.newSprite(heroGroup, sheet_hero, sequences_hero)
-	hero.x = 300
-	hero.y = contH-200
+	hero.x = 300 -- Default: 300
+	hero.y = contH-157 -- Default: contH-157
 	hero.myName = "hero"
-	--hero:setSequence("normalRun")
 	hero:play()
 
 	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
-	--physics.addBody(hero, "dynamic", { bounce=0, radius=109 })
-	hero.isFixedRotation = true
-	hero.isSleepingAllowed = false
+	hero.isFixedRotation = true -- This makes sure the sprite is never rotated unless explicitly told so
+	hero.isSleepingAllowed = false -- This makes sure the player falls down gaps
 end
 
 local function loadTouchAreas()
@@ -281,21 +248,17 @@ local function createRandomGroundSection()
 	if(lastGroundType == "hole") then
 		createGroundSection("leftGround")
 		lastGroundType = "leftGround"
-		print(">> left ground")
 	elseif(lastGroundType == "leftGround" or lastGroundType == "middleGround") then
 		if(mRand(4) == 1) then
 			createGroundSection("rightGround")
 			lastGroundType = "rightGround"
-			print(">> right ground")
 		else
 			createGroundSection("middleGround")
 			lastGroundType = "middleGround"
-			print(">> middle ground")
 		end
 	elseif(lastGroundType == "rightGround") then
 		lastGroundType = "hole"
 		createGroundSection("hole")
-		print(">> hole")
 	end
 end
 
@@ -306,7 +269,7 @@ local function loadGround()
 end
 
 ----
--- Update on tick functions
+-- Update on new frame functions
 ----
 local function updateGround()
 	for i=#groundTable, 1, -1 do
@@ -327,17 +290,14 @@ local function updateBackground()
 
 	if(clouds1.x < -414) then
 		clouds1.x = clouds3.x + 828
-		--print("clouds1 pos:" .. clouds1.x .. " Switch!")
 	end
 
 	if(clouds2.x < -414) then
 		clouds2.x = clouds1.x + 828
-		--print("clouds2 pos:" .. clouds2.x .. " Switch!")
 	end
 
 	if(clouds3.x < -414) then
 		clouds3.x = clouds2.x + 828
-		--print("clouds3 pos:" .. clouds3.x .. " Switch!")
 	end
 end
 
@@ -347,18 +307,14 @@ local function updateScenery()
 	scenery3.x = scenery3.x - (2 * gameSpeed) * dt
 
 	if(scenery1.x < -568) then
-		scenery1.x = scenery3.x + 1136
-		--print("scenery1 pos:" .. scenery1.x .. " Switch!")
-	end
+		scenery1.x = scenery3.x + 1136	end
 
 	if(scenery2.x < -568) then
 		scenery2.x = scenery1.x + 1136
-		--print("scenery2 pos:" .. scenery2.x .. " Switch!")
 	end
 
 	if(scenery3.x < -568) then
 		scenery3.x = scenery2.x + 1136
-		--print("scenery3 pos:" .. scenery3.x .. " Switch!")
 	end
 end
 
@@ -369,24 +325,20 @@ local function updateForeground()
 
 	if(foreground1.x < -568) then
 		foreground1.x = foreground3.x + 1136
-		--print("scenery1 pos:" .. scenery1.x .. " Switch!")
 	end
 
 	if(foreground2.x < -568) then
 		foreground2.x = foreground1.x + 1136
-		--print("scenery2 pos:" .. scenery2.x .. " Switch!")
 	end
 
 	if(foreground3.x < -568) then
 		foreground3.x = foreground2.x + 1136
-		--print("scenery3 pos:" .. scenery3.x .. " Switch!")
 	end
 end
 
 local function updateMetersRun()
 	metersRun = metersRun + (0.05 * gameSpeed) * dt -- Meter updates depending on game speed
 	meterText.text = math.floor(metersRun) .. " meters"
-	--math.round(metersRun*10)*0.1
 end
 
 local function performJump()
@@ -442,7 +394,8 @@ local function dash(event)
 end
 
 local function checkHeroPosition()
-	if(hero.y > contH-64) then -- I'm not sure if this actually does anything
+	-- Check if the player has fallen down a gap
+	if(hero.y > contH-64) then
 		gameOver = true
 	end
 
@@ -461,8 +414,7 @@ local function performGameOver()
 end
 
 ----
--- Memory monitoring
--- https://gist.github.com/JesterXL/5615023
+-- Memory monitoring (https://gist.github.com/JesterXL/5615023)
 ----
 local function monitorMemory()
   	collectgarbage()
@@ -481,11 +433,8 @@ local function gameLoop(event)
 		updateScenery()
 		updateMetersRun()
 	elseif(gameOver and not gameOverPerformed) then
-		--physics.pause()
-		--Runtime:removeEventListener("enterFrame", gameLoop) -- This needs to be removed before game over (though, should it be removed in will hide? or here?)
 		performGameOver()
 	end
-
 	monitorMemory()
 end
 
@@ -521,11 +470,6 @@ local function onCollision(event)
 				hero:play()
 			end
 		end
-
-		-- If the hero collides with the side of a gap
-		--if(didCollide(obj1, obj2, "hero", "leftGround") and hero.y > contH-64) then
-		--	gameOver = true
-		--end
 	end
 end
 
@@ -534,10 +478,6 @@ local function loadEventListeners()
 	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
 	Runtime:addEventListener("collision", onCollision)
-end
-
-local function loadTimers()
-	
 end
 
 -- -----------------------------------------------------------------------------------
@@ -549,9 +489,7 @@ function scene:create(event)
 
 	local sceneGroup = self.view
 	-- Code here runs when the scene is first created but has not yet appeared on screen
-
 	--physics.pause() -- Pause physics while everything initializes
-
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(groundGroup)
@@ -586,7 +524,6 @@ function scene:show(event)
 		-- Code here runs when the scene is entirely on screen
 		physics.start()
 		loadEventListeners()
-		loadTimers()
 	end
 end
 
@@ -608,11 +545,7 @@ function scene:hide(event)
 		display.remove(uiGroup)
 		display.remove(mainGroup)
 		display.remove(heroGroup)
-		backGroup = nil
-		groundGroup = nil
-		uiGroup = nil
-		mainGroup = nil
-		heroGroup = nil
+		backGroup, groundGroup, uiGroup, mainGroup, heroGroup = nil, nil, nil, nil, nil
 	end
 end
 
