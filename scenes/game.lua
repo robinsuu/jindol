@@ -328,7 +328,6 @@ local function updateGround()
 end
 
 local function updateCoins()
-	print(#coinTable)
 	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
 
