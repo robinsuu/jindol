@@ -256,10 +256,10 @@ local function createRandomCoinPattern()
 	local newPattern = nil
 	local randNum = mRand(10)
 
-	if(randNum == 10) then
+	if(randNum == 9) then
 		newPattern = "jindol"
 	elseif(randNum > 1)	then
-		newPattern = "straightFive"
+		newPattern = "straightTen"
 	end
 
 	if(newPattern ~= nil) then

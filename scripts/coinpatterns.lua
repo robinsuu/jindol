@@ -21,12 +21,17 @@ local baseX = 50
 local coinTable = {}
 
 coinTable = {
-	straightFive = {
+	straightTen = {
 		{ x=baseX*0, y=baseY+50 }, -- 1
 		{ x=baseX*1, y=baseY+50 },-- 2
 		{ x=baseX*2, y=baseY+50 }, -- 3
 		{ x=baseX*3, y=baseY+50 },-- 4
-		{ x=baseX*4, y=baseY+50 } -- 5
+		{ x=baseX*4, y=baseY+50 }, -- 5
+		{ x=baseX*5, y=baseY+50 },-- 6
+		{ x=baseX*6, y=baseY+50 },-- 7
+		{ x=baseX*7, y=baseY+50 },-- 8
+		{ x=baseX*8, y=baseY+50 },-- 9
+		{ x=baseX*9, y=baseY+50 }-- 10
 	},
 	jindol = {
 		-- J
