@@ -51,6 +51,7 @@ local dt -- Delta time
 local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType
 local metersRun, meterText
+local coinsConsumed, coinsText
 
 ----
 -- Animations
@@ -111,6 +112,7 @@ local function initVariables()
 	runtime = 0
 	dt = getDeltaTime()
 	metersRun = 0
+	coinsConsumed = 0
 end
 
 local function initGroundSections()
@@ -236,12 +238,17 @@ local function loadUI()
 	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
 	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
 	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
+	meterText.anchorX = 0.5 -- Aligned center
+	coinsText = display.newEmbossedText(uiGroup, "Coins: 0", 10, 30, native.systemFont, 30)
+	coinsText.anchorX = 0 -- Aligned left
 end
 
 local function createCoin(xPos, yPos)
 	local newCoin = display.newImageRect(mainGroup, "images/items/coin.png", 50, 50)
 	newCoin.x = xPos + contW+100
 	newCoin.y = yPos
+	newCoin.myName = "coin"
+	physics.addBody(newCoin, "static", { isSensor=true, radius=25, bounce=0 })
 	table.insert(coinTable, newCoin)
 end
 
@@ -321,11 +328,14 @@ local function updateGround()
 end
 
 local function updateCoins()
-	for i=#coinTable, 1, -1 do
+	print(#coinTable)
+	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
-		coin.x = coin.x - (10 * gameSpeed) * dt
+
+		coin.x = (coin.x or 0) - (10 * gameSpeed) * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
 
 		if(coin.x <= -100) then
+			display.remove(coin)
 			table.remove(coinTable, i)
 		end
 	end
@@ -441,6 +451,11 @@ local function dash(event)
 	end
 end
 
+local function consumeCoin()
+	coinsConsumed = coinsConsumed + 1
+	coinsText.text = "Coins: " .. coinsConsumed
+end
+
 local function checkHeroPosition()
 	-- Check if the player has fallen down a gap
 	if(hero.y > contH-64) then
@@ -518,6 +533,17 @@ local function onCollision(event)
 				hero:setSequence("normalRun")
 				hero:play()
 			end
+		end
+
+		if(didCollide(obj1, obj2, "hero", "coin")) then
+			local coin = nil
+
+			if(obj1.myName == "coin") then
+				display.remove(obj1)
+			else
+				display.remove(obj2)
+			end
+			consumeCoin()
 		end
 	end
 end
