@@ -303,9 +303,6 @@ local function loadGround()
 	for i=1, groundBuffer, 1 do
 		createGroundSection("middleGround")
 	end
-	--ground1 = display.newImageRect(groundGroup, groundSheet1, groundSheet1Info:getFrameIndex("ground3x10"), 640, 192)
-	--ground1.x = contCX
-	--ground1.y = contH-ground1.height/2
 end
 
 ----
@@ -413,9 +410,11 @@ local function jump(event)
 	end
 
 	if(event.phase == "ended" or event.phase == "cancelled") then
-		hero:setSequence("jumpDown")
-		hero:play()
 		transition.cancel(jumpTransition)
+		if(hero.y <= contCY-100 and not isDashing) then
+			hero:setSequence("jumpDown")
+			hero:play()
+		end
 	end
 end
 
@@ -432,26 +431,25 @@ local function performDash()
 end
 
 local function dash(event)
-	if(event.phase == "began" and not isDashing) then
+	if(event.phase == "began" and not isDashing and hero.y <= contH-157) then
 		isDashing = true
 		performDash()
 	end
 
-	if(event.phase == "ended" or event.phase == "cancelled") then
+	if(event.phase == "ended" or event.phase == "cancelled" or hero.y > contH-157) then
 		dashEnding()
 	end
 end
 
 local function checkHeroPosition()
-	--print(hero.y)
-	if(hero.y > contH-64) then
+	if(hero.y > contH-64) then -- I'm not sure if this actually does anything
 		gameOver = true
 	end
 
-	--if(not isJumping and hero.sequence == "jumpDown") then
-	--	hero:setSequence("normalRun")
-	--	hero:play()
-	--end
+	-- Adjust hero position if offset
+	if(hero.x > 301 or hero.x < 299 and hero.y <= contH-157) then
+		hero.x = 300
+	end
 end
 
 local function performGameOver()
@@ -516,14 +514,18 @@ local function onCollision(event)
 		local obj1 = event.object1
 		local obj2 = event.object2
 
+		-- Reset run animation when colliding with ground
 		if(didCollide(obj1, obj2, "hero", "middleGround") or didCollide(obj1, obj2, "hero", "leftGround") or didCollide(obj1, obj2, "hero", "rightGround")) then
-			--display.newText(uiGroup, "Landed", contCX, contCY, native.systemFont, 44)
 			if(hero ~= nil and (hero.sequence == "jumpDown" or hero.sequence == "jumpUp")) then
 				hero:setSequence("normalRun")
 				hero:play()
-				--isJumping = false -- Not sure if this is needed but it seems to improve the animation timing (this could also just be an illusion)
 			end
 		end
+
+		-- If the hero collides with the side of a gap
+		--if(didCollide(obj1, obj2, "hero", "leftGround") and hero.y > contH-64) then
+		--	gameOver = true
+		--end
 	end
 end
 
