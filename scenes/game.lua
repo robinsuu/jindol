@@ -66,6 +66,13 @@ local sheetOptions_hero, sheet_hero, sequences_hero
 ----
 local groundSections -- Holds the properties of the different ground sections
 local groundTable -- Holds the actual ground sections displayed in the world
+local coinPatterns
+local coinTable
+
+----
+-- Timers
+----
+local coinTimer
 
 ----
 -- Display groups
@@ -94,6 +101,7 @@ end
 local function initVariables()
 	groundTable = {}
 	groundBuffer = 10
+	coinTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
@@ -107,6 +115,10 @@ end
 
 local function initGroundSections()
 	groundSections = require("scripts.groundsections")
+end
+
+local function initCoinPatterns()
+	coinPatterns = require("scripts.coinpatterns")
 end
 
 local function loadMemoryMonitor()
@@ -226,6 +238,31 @@ local function loadUI()
 	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
 end
 
+local function createCoin(xPos, yPos)
+	local newCoin = display.newImageRect(mainGroup, "images/items/coin.png", 50, 50)
+	newCoin.x = xPos + contW+100
+	newCoin.y = yPos
+	table.insert(coinTable, newCoin)
+end
+
+local function createRandomCoinPattern()
+	local newPattern = nil
+	local randNum = mRand(10)
+
+	if(randNum == 10) then
+		newPattern = "jindol"
+	elseif(randNum > 1)	then
+		newPattern = "straightFive"
+	end
+
+	if(newPattern ~= nil) then
+		for i=1, #coinPatterns[newPattern], 1 do
+			local newCoin = coinPatterns[newPattern][i]
+			createCoin(newCoin.x, newCoin.y)
+		end
+	end
+end
+
 local function createGroundSection(name)
 	local section = groundSections[name]
 	local newObj = display.newImageRect(groundGroup, section.file, section.width, section.height)
@@ -279,6 +316,17 @@ local function updateGround()
 		if(section.x <= -640) then
 			table.remove(groundTable, i)
 			createRandomGroundSection()
+		end
+	end
+end
+
+local function updateCoins()
+	for i=#coinTable, 1, -1 do
+		local coin = coinTable[i]
+		coin.x = coin.x - (10 * gameSpeed) * dt
+
+		if(coin.x <= -100) then
+			table.remove(coinTable, i)
 		end
 	end
 end
@@ -428,6 +476,7 @@ local function gameLoop(event)
 		checkHeroPosition()
 		dt = getDeltaTime()
 		updateGround()
+		updateCoins()
 		updateBackground()
 		updateForeground()
 		updateScenery()
@@ -480,6 +529,11 @@ local function loadEventListeners()
 	Runtime:addEventListener("collision", onCollision)
 end
 
+-- Important: Omit the () after timer callback functions or it will malfunction
+local function loadTimers()
+	coinTimer = timer.performWithDelay(5000, createRandomCoinPattern, 0)
+end
+
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
@@ -499,6 +553,7 @@ function scene:create(event)
 
 	initVariables()
 	initGroundSections()
+	initCoinPatterns()
 
 	loadBackground()
 	loadScenery()
@@ -523,6 +578,7 @@ function scene:show(event)
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
 		physics.start()
+		loadTimers()
 		loadEventListeners()
 	end
 end
@@ -538,6 +594,8 @@ function scene:hide(event)
 		physics.pause()
 		Runtime:removeEventListener("collision", onCollision)
 		Runtime:removeEventListener("enterFrame", gameLoop)
+		timer.cancel(coinTimer)
+		coinTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
 		display.remove(backGroup)
