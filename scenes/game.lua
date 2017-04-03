@@ -139,7 +139,7 @@ local function initCoinPatterns()
 end
 
 local function loadMemoryMonitor()
-	memoryText = display.newText(uiGroup, "", contW-30, 60, native.systemFont, 30)
+	memoryText = display.newText(uiGroup, "", contW-30, 30, native.systemFont, 30)
 	memoryText.anchorX = 1
 	memoryText:setFillColor(0,0,0)
 end
@@ -304,11 +304,16 @@ local function createObstacle(obstacleType, xPos)
 end
 
 local function createRandomObstacle(xPos)
-	local randNum = mRand(2)
+	local randNum = mRand(3)
 	if(randNum == 1) then
 		createObstacle("broccoli", xPos)
 	elseif(randNum == 2) then
 		createObstacle("asparagus", xPos)
+	elseif(randNum == 3) then
+		createObstacle("asparagus", xPos-200)
+		createObstacle("asparagus", xPos-100)
+		createObstacle("asparagus", xPos)
+		createObstacle("asparagus", xPos+100)
 	end
 end
 
@@ -491,14 +496,14 @@ local function dashEnding()
 	gameSpeed = 1
 	transition.cancel(dashTransition)
 	timer.cancel(dashTimer)
-	hero:setFillColor(1)
+	hero.alpha = 1
 end
 
 local function performDash()
-	gameSpeed = 2
+	gameSpeed = 1.5
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
-	hero:setFillColor(1, 0.5, 0.5)
+	hero.alpha = 0.5
 end
 
 local function dash(event)
@@ -586,12 +591,15 @@ local function didCollide(obj1, obj2, name1, name2)
 end
 
 local function collideWithObstacle(obstacle)
-	obstacleCollisionTransition = transition.to(obstacle, { time=50, width=obstacle.width*2, height=obstacle.height*2, 
+	obstacleCollisionTransition = transition.to(obstacle, { time=200, x=-100, y=-100, rotation=-360, 
 		onComplete=function() 
-			display.remove(obstacle) 
-			gameOver=true 
-		end })
-	heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+		display.remove(obstacle)
+	end })
+
+	if(not isDashing) then
+		gameOver = true
+		heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+	end
 end
 
 local function onCollision(event)
@@ -627,11 +635,7 @@ local function onCollision(event)
 					obstacle = obj2
 			end
 
-			if(isDashing) then
-				display.remove(obstacle)
-			else
-				collideWithObstacle(obstacle)
-			end
+			collideWithObstacle(obstacle)
 		end
 	end
 end
