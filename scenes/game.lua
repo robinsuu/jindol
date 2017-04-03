@@ -15,7 +15,8 @@ local scene = composer.newScene()
 -- Requires
 ----
 local physics = require("physics")
-local heroPhysicsData = require("scripts.herophysics").physicsData(1.0)
+local physicsDef = require("scripts.physicsdef").physicsData(1.0)
+local objectSheetInfo = require("scripts.objects")
 
 ----
 -- Physics
@@ -45,6 +46,7 @@ local hero
 local memoryText -- Used for memory monitoring
 local gameSpeed
 local isJumping, jumpTransition, isDashing, dashTransition
+local obstacleCollisionTransition, heroCollisionTransition
 local gameOver, gameOverPerformed
 local runtime -- Game time (used to calculate delta time)
 local dt -- Delta time
@@ -52,6 +54,8 @@ local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType
 local metersRun, meterText
 local coinsConsumed, coinsText
+local foodConsumed, foodText -- To be implemented
+local score, scoreText
 
 ----
 -- Animations
@@ -61,19 +65,21 @@ local sheetOptions_hero, sheet_hero, sequences_hero
 ----
 -- Image sheets
 ----
+local objectImageSheet
 
 ----
 -- Tables
 ----
 local groundSections -- Holds the properties of the different ground sections
 local groundTable -- Holds the actual ground sections displayed in the world
-local coinPatterns
-local coinTable
+local coinPatterns -- Holds the coordinates for different coin patterns
+local coinTable -- Holds the coins displayed in the world
+local obstacleTable -- Holds the obstacles displayed in the world
 
 ----
 -- Timers
 ----
-local coinTimer
+local coinTimer, dashTimer
 
 ----
 -- Display groups
@@ -103,6 +109,7 @@ local function initVariables()
 	groundTable = {}
 	groundBuffer = 10
 	coinTable = {}
+	obstacleTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
@@ -113,6 +120,14 @@ local function initVariables()
 	dt = getDeltaTime()
 	metersRun = 0
 	coinsConsumed = 0
+	foodConsumed = 0
+	score = 0
+	coinTimer = nil
+	dashTimer = nil
+end
+
+local function initImageSheets()
+	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
 end
 
 local function initGroundSections()
@@ -124,7 +139,8 @@ local function initCoinPatterns()
 end
 
 local function loadMemoryMonitor()
-	memoryText = display.newText(uiGroup, "", contW-150, 30, native.systemFont, 30)
+	memoryText = display.newText(uiGroup, "", contW-30, 60, native.systemFont, 30)
+	memoryText.anchorX = 1
 	memoryText:setFillColor(0,0,0)
 end
 
@@ -220,7 +236,7 @@ local function loadHero()
 	hero.myName = "hero"
 	hero:play()
 
-	physics.addBody(hero, "dynamic", heroPhysicsData:get("hero"))
+	physics.addBody(hero, "dynamic", physicsDef:get("hero"))
 	hero.isFixedRotation = true -- This makes sure the sprite is never rotated unless explicitly told so
 	hero.isSleepingAllowed = false -- This makes sure the player falls down gaps
 end
@@ -241,10 +257,13 @@ local function loadUI()
 	meterText.anchorX = 0.5 -- Aligned center
 	coinsText = display.newEmbossedText(uiGroup, "Coins: 0", 10, 30, native.systemFont, 30)
 	coinsText.anchorX = 0 -- Aligned left
+	scoreText = display.newEmbossedText(uiGroup, "Score: 0", 10, 70, native.systemFont, 30)
+	scoreText.anchorX = 0 -- Aligned left
 end
 
 local function createCoin(xPos, yPos)
-	local newCoin = display.newImageRect(mainGroup, "images/items/coin.png", 50, 50)
+	--local newCoin = display.newImageRect(mainGroup, "images/items/coin.png", 50, 50)
+	local newCoin = display.newImageRect(mainGroup, objectImageSheet, objectSheetInfo:getFrameIndex("coin"), 50, 50)
 	newCoin.x = xPos + contW+100
 	newCoin.y = yPos
 	newCoin.myName = "coin"
@@ -270,9 +289,32 @@ local function createRandomCoinPattern()
 	end
 end
 
+local function createObstacle(obstacleType, xPos)
+	local index = objectSheetInfo:getFrameIndex(obstacleType)
+	local properties = objectSheetInfo:getSheet().frames[index]
+	local newObstacle = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
+	newObstacle.x = xPos
+	newObstacle.y = contH-(properties.height-35)
+	newObstacle.myName = obstacleType
+
+	physics.addBody(newObstacle, "static", physicsDef:get(obstacleType))
+	newObstacle.isFixedRotation = true
+
+	table.insert(obstacleTable, newObstacle)
+end
+
+local function createRandomObstacle(xPos)
+	local randNum = mRand(2)
+	if(randNum == 1) then
+		createObstacle("broccoli", xPos)
+	elseif(randNum == 2) then
+		createObstacle("asparagus", xPos)
+	end
+end
+
 local function createGroundSection(name)
 	local section = groundSections[name]
-	local newObj = display.newImageRect(groundGroup, section.file, section.width, section.height)
+	local newObj = display.newImageRect(groundGroup, objectImageSheet, objectSheetInfo:getFrameIndex(name), section.width, section.height)
 	newObj.myName = name
 	if(#groundTable == 0) then -- This is needed to load the first section
 		newObj.x = 0
@@ -282,9 +324,13 @@ local function createGroundSection(name)
 	newObj.y = section.y 
 
 	if(name ~= "hole") then
-		physics.addBody(newObj, "static", { bounce=0 })
-	end
+		physics.addBody(newObj, "static", { bounce=0, density=0 })
 
+		-- Chance of spawning obstacle
+		if(metersRun > 10 and mRand(3) == 1 and #obstacleTable < 3 and lastGroundType == "middleGround") then
+			createRandomObstacle(newObj.x)
+		end
+	end
 	table.insert(groundTable, newObj)
 end
 
@@ -327,10 +373,20 @@ local function updateGround()
 	end
 end
 
+local function updateObstacles()
+	for i=#obstacleTable, 1, -1 do
+		local obstacle = obstacleTable[i]
+		obstacle.x = (obstacle.x or 0) - (10 * gameSpeed) * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
+
+		if(obstacle.x <= -100) then
+			table.remove(obstacleTable, i)
+		end
+	end
+end
+
 local function updateCoins()
 	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
-
 		coin.x = (coin.x or 0) - (10 * gameSpeed) * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
 
 		if(coin.x <= -100) then
@@ -393,9 +449,12 @@ local function updateForeground()
 	end
 end
 
-local function updateMetersRun()
+local function updateScore()
 	metersRun = metersRun + (0.05 * gameSpeed) * dt -- Meter updates depending on game speed
 	meterText.text = math.floor(metersRun) .. " meters"
+
+	score = (metersRun) + ((foodConsumed * 5) + coinsConsumed * 2)
+	scoreText.text = "Score: " .. math.floor(score)
 end
 
 local function performJump()
@@ -413,7 +472,7 @@ local function jump(event)
 		isJumping = false
 	end
 
-	if(event.phase == "began" and not isJumping and velocityY == 0) then
+	if(event.phase == "began" and not isJumping and velocityY == 0 and not gameOver) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
 		isJumping = true
 		performJump()
 	end
@@ -428,19 +487,22 @@ local function jump(event)
 end
 
 local function dashEnding()
-	isDashing = false 
+	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
+	timer.cancel(dashTimer)
+	hero:setFillColor(1)
 end
 
 local function performDash()
-	gameSpeed = 5
-	dashTransition = transition.to(hero, { time=500, y=hero.y })
-	timer.performWithDelay(500, dashEnding, 1)
+	gameSpeed = 2
+	dashTransition = transition.to(hero, { time=1000, y=hero.y })
+	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
+	hero:setFillColor(1, 0.5, 0.5)
 end
 
 local function dash(event)
-	if(event.phase == "began" and not isDashing and hero.y <= contH-157) then
+	if(event.phase == "began" and not isDashing and hero.y <= contH-157 and not gameOver) then
 		isDashing = true
 		performDash()
 	end
@@ -469,6 +531,7 @@ end
 
 local function performGameOver()
 	print("<<Game Over>>")
+	hero:pause()
 	leftTouchArea:removeEventListener("tap", jump)
 	rightTouchArea:removeEventListener("tap", dash)
 	composer.showOverlay("scenes.gameover")
@@ -491,10 +554,11 @@ local function gameLoop(event)
 		dt = getDeltaTime()
 		updateGround()
 		updateCoins()
+		updateObstacles()
 		updateBackground()
 		updateForeground()
 		updateScenery()
-		updateMetersRun()
+		updateScore()
 	elseif(gameOver and not gameOverPerformed) then
 		performGameOver()
 	end
@@ -521,6 +585,15 @@ local function didCollide(obj1, obj2, name1, name2)
 	return collided
 end
 
+local function collideWithObstacle(obstacle)
+	obstacleCollisionTransition = transition.to(obstacle, { time=50, width=obstacle.width*2, height=obstacle.height*2, 
+		onComplete=function() 
+			display.remove(obstacle) 
+			gameOver=true 
+		end })
+	heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+end
+
 local function onCollision(event)
 	if(event.phase == "began") then
 		local obj1 = event.object1
@@ -543,6 +616,22 @@ local function onCollision(event)
 				display.remove(obj2)
 			end
 			consumeCoin()
+		end
+
+		if(didCollide(obj1, obj2, "hero", "asparagus") or didCollide(obj1, obj2, "hero", "broccoli")) then
+			local obstacle = nil
+
+			if(obj1.myName == "asparagus" or obj1.myName == "broccoli") then
+					obstacle = obj1
+				else
+					obstacle = obj2
+			end
+
+			if(isDashing) then
+				display.remove(obstacle)
+			else
+				collideWithObstacle(obstacle)
+			end
 		end
 	end
 end
@@ -577,6 +666,7 @@ function scene:create(event)
 	sceneGroup:insert(heroGroup)
 
 	initVariables()
+	initImageSheets()
 	initGroundSections()
 	initCoinPatterns()
 
@@ -620,9 +710,12 @@ function scene:hide(event)
 		Runtime:removeEventListener("collision", onCollision)
 		Runtime:removeEventListener("enterFrame", gameLoop)
 		timer.cancel(coinTimer)
+		timer.cancel(dashTimer)
+		dashTimer = nil
 		coinTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
+		physics.stop()
 		display.remove(backGroup)
 		display.remove(groundGroup)
 		display.remove(uiGroup)
