@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------------
 --
--- mainmenu.lua
+-- highscore.lua
 --
--- This is the first screen the player sees after the splash screen
+-- This is the high score screen
 --
 -----------------------------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ local scene = composer.newScene()
 -- Requires
 ----
 local menuSheetInfo = require("scripts.menubuttons")
+local json = require("json")
 
 ----
 -- Forward declarations
@@ -32,9 +33,14 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local titleText
-local titleImage
-local playButton, highScoreButton, settingsButton, shareButton, shopButton, howToPlayButton
+local titleText, finalScoreText, okText
+local filePath
+local finalScore, finalMetersRun, finalCoinsConsumed
+
+----
+-- Tables
+----
+local scoresTable
 
 ----
 -- Image sheets
@@ -55,6 +61,11 @@ local function initDisplayGroups()
 	uiGroup = display.newGroup()
 end
 
+local function initVariables()
+	filePath = system.pathForFile("scores.json", system.DocumentsDirectory)
+	scoresTable = {}
+end
+
 local function initImageSheets()
 	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
 end
@@ -65,45 +76,87 @@ local function loadBackground()
 end
 
 local function loadUI()
-	titleText = display.newEmbossedText(uiGroup, "진돌 & 히디!", contCX, 50, native.systemFontBold, 72)
+	highScoreTitleText = display.newEmbossedText(uiGroup, "High Scores", contCX, 50, native.systemFont, 72)
 
-	playButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_play"), 301, 151)
-	playButton.x = contCX
-	playButton.y = contH-100
+	okText = display.newEmbossedText(uiGroup, "Tap to return to main menu", contCX, contH-50, native.systemFont, 72)
 
-	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 101, 101)
-	shareButton.x = 60
-	shareButton.y = 60
-
-	settingsButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_settings"), 101, 101)
-	settingsButton.x = contW-60
-	settingsButton.y = 60
-
-	highScoreButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_high-score"), 251, 151)
-	highScoreButton.x = contCX+300
-	highScoreButton.y = contH-100
-
-	shopButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_shop"), 251, 151)
-	shopButton.x = contCX-300
-	shopButton.y = contH-100
-
-	titleImage = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("34"), 338, 300)
-	titleImage.x = contCX
-	titleImage.y = contCY-50
 end
 
-local function gotoGame()
-	composer.gotoScene("scenes.game")
+local function loadScoresFromFile()
+	local file = io.open(filePath, "r")
+
+	if(file) then
+		local content = file:read("*a")
+		io.close(file)
+		scoresTable = json.decode(content)
+	end
+
+	if(scoresTable == nil or #scoresTable == 0) then
+		scoresTable = { 0, 0, 0, 0, 0 }
+	end
 end
 
-local function gotoHighScore()
-	composer.gotoScene("scenes.highscore")
+local function saveScoresToFile()
+	for i=#scoresTable, 6, -1 do
+		table.remove(scoresTable, i)
+	end
+
+	local file = io.open(filePath, "w")
+
+	if(file) then
+		file:write(json.encode(scoresTable))
+		io.close(file)
+	end
+end
+
+local function compare(a, b)
+	return a > b
+end
+
+local function loadScores()
+	finalScore = composer.getVariable("finalScore")
+	finalMetersRun = composer.getVariable("finalMetersRun")
+	finalCoinsConsumed = composer.getVariable("finalCoinsConsumed")
+
+	table.insert(scoresTable, finalScore) -- Insert new score in table
+
+	-- Reset globals
+	composer.setVariable("finalScore", 0)
+	composer.setVariable("finalMetersRun", 0)
+	composer.setVariable("finalCoinsConsumed", 0)
+
+	table.sort(scoresTable, compare) -- Sort scores in order
+
+	saveScoresToFile()
+
+	if(finalScore and finalScore ~= 0) then
+		finalScoreText = display.newText(uiGroup, "Your score: " .. finalScore, display.contentCenterX, 150, native.systemFont, 36)
+	end
+
+	for i=1, 5 do
+		if(scoresTable[i]) then
+			local yPos = 200 + (i * 56)
+
+			if(not finalScore or finalScore == 0) then
+				yPos = 100 + (i * 56)
+			end
+
+			local rankNum = display.newText(uiGroup, "#" .. i, contCX-50, yPos, native.systemFont, 36)
+			rankNum:setFillColor(0)
+			rankNum.anchorX = 1
+
+			local thisScore = display.newText(uiGroup, scoresTable[i], contCX-30, yPos, native.systemFont, 36)
+			thisScore.anchorX = 0
+		end
+	end
+end
+
+local function gotoMenu()
+	composer.gotoScene("scenes.mainmenu")
 end
 
 local function loadEventListeners()
-	--background:addEventListener("tap", gotoGame)
-	playButton:addEventListener("tap", gotoGame)
-	highScoreButton:addEventListener("tap", gotoHighScore)
+	okText:addEventListener("tap", gotoMenu)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -120,10 +173,13 @@ function scene:create(event)
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(uiGroup)
 
+	initVariables()
 	initImageSheets()
 
 	loadBackground()
 	loadUI()
+	loadScoresFromFile()
+	loadScores()
 end
 
 -- show()
@@ -137,7 +193,7 @@ function scene:show(event)
 
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
-		composer.removeScene("scenes.game", false) -- Try false if it acts weird
+		--composer.removeScene("scenes.game", false) -- Try false if it acts weird
 		loadEventListeners()
 	end
 end

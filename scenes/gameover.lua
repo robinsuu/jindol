@@ -48,15 +48,15 @@ local function loadBackground()
 end
 
 local function loadText()
-	tapToRestartText = display.newEmbossedText(uiGroup, "Tap to restart!", contCX, display.contentHeight/2, native.systemFont, 72)
+	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to continue", contCX, display.contentHeight/2, native.systemFont, 72)
 end
 
-local function gotoMainMenu()
-	composer.gotoScene("scenes.mainmenu")
+local function gotoHighScores()
+	composer.gotoScene("scenes.highscore")
 end
 
 local function loadEventListeners()
-	background:addEventListener("tap", gotoMainMenu)
+	background:addEventListener("tap", gotoHighScores)
 end
 
 -- -----------------------------------------------------------------------------------

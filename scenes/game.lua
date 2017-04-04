@@ -225,7 +225,15 @@ local function loadAnimations()
 			count = 8,
 			time = 400, -- This must be tweaked, or replaced with a transition
 			loopCount = 1
-		}
+		},
+		{
+			name = "dashRun",
+			start = 21,
+			count = 10,
+			loopCount = 0,
+			time = 100, -- This must be tweaked, or replaced with a transition
+			--loopCount = 1
+		},
 	}
 end
 
@@ -463,8 +471,10 @@ local function updateScore()
 end
 
 local function performJump()
-	hero:setSequence("jumpUp")
-	hero:play()
+	if(not isDashing) then
+		hero:setSequence("jumpUp")
+		hero:play()
+	end
 	
 	jumpTransition = transition.to(hero, { time=600, y=hero.y-300, transition=easing.outQuart })
 end
@@ -492,18 +502,24 @@ local function jump(event)
 end
 
 local function dashEnding()
+	if(not gameOver) then
+		hero:setSequence("normalRun")
+		hero:play()
+	end
 	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
 	timer.cancel(dashTimer)
-	hero.alpha = 1
+	--hero.alpha = 1
 end
 
 local function performDash()
+	hero:setSequence("dashRun")
+	hero:play()
 	gameSpeed = 1.5
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
-	hero.alpha = 0.5
+	--hero.alpha = 0.5
 end
 
 local function dash(event)
@@ -539,6 +555,9 @@ local function performGameOver()
 	hero:pause()
 	leftTouchArea:removeEventListener("tap", jump)
 	rightTouchArea:removeEventListener("tap", dash)
+	composer.setVariable("finalScore", math.floor(score))
+	composer.setVariable("finalMetersRun", math.floor(metersRun))
+	composer.setVariable("finalCoinsConsumed", math.floor(coinsConsumed))
 	composer.showOverlay("scenes.gameover")
 	gameOverPerformed = true
 end
@@ -666,8 +685,8 @@ function scene:create(event)
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(groundGroup)
 	sceneGroup:insert(uiGroup)
-	sceneGroup:insert(mainGroup)
 	sceneGroup:insert(heroGroup)
+	sceneGroup:insert(mainGroup)
 
 	initVariables()
 	initImageSheets()
