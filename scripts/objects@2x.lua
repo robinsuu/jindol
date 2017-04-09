@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:2eb55d7dd4f675ef32039b52db9cbf6f:32809b259291e7c9b8bc3fca4219a7bf:02ee67bb1d744d8a086f79ef6d2fcbaa$
+-- $TexturePacker:SmartUpdate:65f5332d183fcb29d62657dd612bf93f:86b5223c8dd592b9bf0ae1c8cea93cd2:02ee67bb1d744d8a086f79ef6d2fcbaa$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -16,7 +16,7 @@ SheetInfo.sheet =
     
         {
             -- asparagus
-            x=492,
+            x=272,
             y=2,
             width=76,
             height=366,
@@ -36,8 +36,8 @@ SheetInfo.sheet =
         },
         {
             -- cash
-            x=272,
-            y=2,
+            x=646,
+            y=226,
             width=216,
             height=192,
 
@@ -48,24 +48,24 @@ SheetInfo.sheet =
         },
         {
             -- coin
-            x=272,
-            y=198,
+            x=352,
+            y=226,
             width=100,
             height=100,
 
         },
         {
             -- hamburger
-            x=646,
-            y=202,
+            x=352,
+            y=2,
             width=200,
             height=200,
 
         },
         {
             -- hole
-            x=1190,
-            y=2,
+            x=352,
+            y=206,
             width=6,
             height=6,
 
@@ -75,45 +75,33 @@ SheetInfo.sheet =
             sourceHeight = 128
         },
         {
-            -- jindol_cash
-            x=850,
-            y=202,
-            width=208,
-            height=188,
-
-            sourceX = 22,
-            sourceY = 18,
-            sourceWidth = 250,
-            sourceHeight = 223
-        },
-        {
             -- leftGround
-            x=646,
+            x=556,
             y=2,
-            width=540,
-            height=96,
+            width=614,
+            height=108,
 
-            sourceX = 100,
-            sourceY = 32,
+            sourceX = 26,
+            sourceY = 0,
             sourceWidth = 640,
-            sourceHeight = 128
+            sourceHeight = 107
         },
         {
             -- middleGround
             x=2,
             y=378,
             width=640,
-            height=96,
+            height=108,
 
             sourceX = 0,
-            sourceY = 32,
+            sourceY = 0,
             sourceWidth = 640,
-            sourceHeight = 128
+            sourceHeight = 107
         },
         {
             -- pizza
-            x=1062,
-            y=202,
+            x=866,
+            y=226,
             width=200,
             height=188,
 
@@ -124,20 +112,20 @@ SheetInfo.sheet =
         },
         {
             -- rightGround
-            x=572,
-            y=102,
-            width=540,
-            height=96,
+            x=556,
+            y=114,
+            width=614,
+            height=108,
 
             sourceX = 0,
-            sourceY = 32,
+            sourceY = 0,
             sourceWidth = 640,
-            sourceHeight = 128
+            sourceHeight = 107
         },
     },
     
-    sheetContentWidth = 1264,
-    sheetContentHeight = 476
+    sheetContentWidth = 1172,
+    sheetContentHeight = 488
 }
 
 SheetInfo.frameIndex =
@@ -149,11 +137,10 @@ SheetInfo.frameIndex =
     ["coin"] = 4,
     ["hamburger"] = 5,
     ["hole"] = 6,
-    ["jindol_cash"] = 7,
-    ["leftGround"] = 8,
-    ["middleGround"] = 9,
-    ["pizza"] = 10,
-    ["rightGround"] = 11,
+    ["leftGround"] = 7,
+    ["middleGround"] = 8,
+    ["pizza"] = 9,
+    ["rightGround"] = 10,
 }
 
 function SheetInfo:getSheet()

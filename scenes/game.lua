@@ -18,6 +18,7 @@ local physics = require("physics")
 local physicsDef = require("scripts.physicsdef").physicsData(1.0)
 local objectSheetInfo = require("scripts.objects")
 local heroSheetInfo = require("scripts.hero")
+local hidiSheetInfo = require("scripts.hidi")
 
 ----
 -- Physics
@@ -43,10 +44,10 @@ local clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
 local foreground1, foreground2, foreground3
 local leftTouchArea, rightTouchArea, jumpButton, dashButton
-local hero
+local hero, hidi
 local memoryText -- Used for memory monitoring
-local gameSpeed
-local isJumping, jumpTransition, isDashing, dashTransition
+local gameSpeed, mainSpeed -- mainSpeed default: 10 (the speed of the interactable objects)
+local isJumping, jumpTransition, isDashing, dashTransition, hidiTransition
 local obstacleCollisionTransition, heroCollisionTransition
 local gameOver, gameOverPerformed
 local runtime -- Game time (used to calculate delta time)
@@ -54,6 +55,7 @@ local dt -- Delta time
 local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType
 local metersRun, meterText
+local energy, energyText
 local coinsConsumed, coinsText
 local foodConsumed, foodText -- To be implemented
 local score, scoreText
@@ -62,13 +64,12 @@ local velocityX, velocityY -- Keeps track of hero speed
 ----
 -- Image sheets
 ----
-local objectImageSheet
-local heroImageSheet
+local objectImageSheet, heroImageSheet, hidiImageSheet
 
 ----
 -- Animations
 ----
-local heroSequences
+local heroSequences, hidiSequences
 
 ----
 -- Tables
@@ -84,7 +85,7 @@ local cashTable -- Holds the cash displayed in the world
 ----
 -- Timers
 ----
-local coinTimer, dashTimer, foodTimer, cashTimer
+local coinTimer, dashTimer, foodTimer, cashTimer, energyTimer, hidiTimer
 
 ----
 -- Display groups
@@ -119,6 +120,7 @@ local function initVariables()
 	cashTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
+	mainSpeed = 12 -- Default: 10 (the speed of interactable objects)
 	isJumping = false
 	isDashing = false
 	gameOver = false
@@ -128,6 +130,7 @@ local function initVariables()
 	metersRun = 0
 	coinsConsumed = 0
 	foodConsumed = 0
+	energy = 0 -- Default 0
 	score = 0
 	velocityX = 0
 	velocityY = 0
@@ -135,12 +138,15 @@ local function initVariables()
 	dashTimer = nil
 	foodTimer = nil
 	cashTimer = nil
+	energyTimer = nil
+	hidiTimer = nil
 	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
 end
 
 local function initImageSheets()
 	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
 	heroImageSheet = graphics.newImageSheet("images/hero/hero.png", heroSheetInfo:getSheet())
+	hidiImageSheet = graphics.newImageSheet("images/background/hidi.png", hidiSheetInfo:getSheet())
 end
 
 local function initGroundSections()
@@ -207,6 +213,7 @@ end
 ----
 local function loadAnimations()
 	heroSequences = require("scripts.herosequences")
+	hidiSequences = require("scripts.hidisequences")
 end
 
 local function loadHero()
@@ -219,6 +226,14 @@ local function loadHero()
 	physics.addBody(hero, "dynamic", physicsDef:get("hero"))
 	hero.isFixedRotation = true -- This makes sure the sprite is never rotated unless explicitly told so
 	hero.isSleepingAllowed = false -- This makes sure the player falls down gaps
+end
+
+local function loadHidi()
+	hidi = display.newSprite(mainGroup, hidiImageSheet, hidiSequences)
+	hidi.x = 50
+	hidi.y = contH-330
+	hidi.myName = "hidi"
+	hidi:play()
 end
 
 local function loadTouchAreas()
@@ -239,6 +254,8 @@ local function loadUI()
 	coinsText.anchorX = 0 -- Aligned left
 	scoreText = display.newEmbossedText(uiGroup, "Score: 0", 10, 70, native.systemFont, 30)
 	scoreText.anchorX = 0 -- Aligned left
+	energyText = display.newEmbossedText(uiGroup, "Energy: 0", contW-70, 70, native.systemFont, 30)
+	energyText.anchorX = 1 -- Aligned right
 end
 
 local function getObjectIndex(type)
@@ -398,7 +415,7 @@ end
 local function updateGround()
 	for i=#groundTable, 1, -1 do
 		local section = groundTable[i]
-		section.x = section.x - (10 * gameSpeed) * dt
+		section.x = section.x - (mainSpeed * gameSpeed) * dt
 
 		if(section.x <= -640) then
 			table.remove(groundTable, i)
@@ -410,7 +427,7 @@ end
 local function updateObstacles()
 	for i=#obstacleTable, 1, -1 do
 		local obstacle = obstacleTable[i]
-		obstacle.x = (obstacle.x or 0) - (10 * gameSpeed) * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
+		obstacle.x = (obstacle.x or 0) - (mainSpeed * gameSpeed) * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
 
 		if(obstacle.x <= -100) then
 			-- Why no display.remove(obstable) ???
@@ -422,7 +439,7 @@ end
 local function updateCash()
 	for i=#cashTable, 1, -1 do	
 		local cash = cashTable[i]
-		cash.x = (cash.x or 0) - (10 * gameSpeed) * dt -- If cash.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
+		cash.x = (cash.x or 0) - (mainSpeed * gameSpeed) * dt -- If cash.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
 
 		if(cash.x <= -100) then
 			display.remove(cash)
@@ -434,7 +451,7 @@ end
 local function updateFood()
 	for i=#foodTable, 1, -1 do	
 		local food = foodTable[i]
-		food.x = (food.x or 0) - (10 * gameSpeed) * dt -- If food.x is false it will use 0 as a fallback value (food.x will be false after food has been consumed)
+		food.x = (food.x or 0) - (mainSpeed * gameSpeed) * dt -- If food.x is false it will use 0 as a fallback value (food.x will be false after food has been consumed)
 
 		if(food.x <= -100) then
 			display.remove(food)
@@ -446,7 +463,7 @@ end
 local function updateCoins()
 	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
-		coin.x = (coin.x or 0) - (10 * gameSpeed) * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
+		coin.x = (coin.x or 0) - (mainSpeed * gameSpeed) * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
 
 		if(coin.x <= -100) then
 			display.remove(coin)
@@ -514,6 +531,8 @@ local function updateScore()
 
 	score = (metersRun) + ((foodConsumed * 5) + coinsConsumed * 2)
 	scoreText.text = "Score: " .. math.floor(score)
+
+	energyText.text = "Energy: " .. energy
 end
 
 local function updateScreen()
@@ -526,6 +545,23 @@ local function updateScreen()
 	updateForeground()
 	updateScenery()
 	updateScore()
+end
+
+local function hidiMoveBack()
+	if(hidiTransition) then
+		transition.cancel(hidiTransition)
+	end
+
+	hidiTransition = transition.to(hidi, { time=500, x=-hidi.width })
+end
+
+local function hidiMoveForward()
+	hidiTimer = timer.performWithDelay(1000, function() 
+		if(hidiTransition) then
+			transition.cancel(hidiTransition)
+		end
+		hidiTransition = transition.to(hidi, { time=2000, x=50 })
+		end, 1)
 end
 
 local function performJump()
@@ -561,7 +597,7 @@ local function jump(event)
 end--]]
 
 local function jump(event)
-	if(not isJumping and not gameOver and hero.y < 465 and hero.y > 464) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
+	if(event.phase == "began" and not isJumping and not gameOver and hero.y < 465 and hero.y > 464) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
 		performJump()
 		isJumping = true
 	end
@@ -575,26 +611,37 @@ local function dashEnding()
 	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
+
+	hidiMoveForward()
 	
 	if(dashTimer) then
 		timer.cancel(dashTimer)
 	end
-	--hero.alpha = 1
+
+	if(energyTimer) then
+		timer.cancel(energyTimer)
+	end
 end
 
 local function performDash()
 	hero:setSequence("dashRun")
 	hero:play()
 	gameSpeed = 2.5
+
+	if(hidiTimer) then
+		timer.cancel(hidiTimer)
+	end
+
+	hidiMoveBack()
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
-	--hero.alpha = 0.5
 end
 
 local function dash(event)
-	if(event.phase == "began" and not isDashing and hero.y <= contH-157 and not gameOver) then
+	if(event.phase == "began" and not isDashing and hero.y <= contH-157 and not gameOver and energy >= 1) then
 		isDashing = true
 		performDash()
+		energyTimer = timer.performWithDelay(100, function() energy = energy - 2 end, 0)
 	end
 
 	if(event.phase == "ended" or event.phase == "cancelled" or hero.y > contH-157) then
@@ -602,9 +649,55 @@ local function dash(event)
 	end
 end
 
+local function consumeFood()
+	if(energy < 100) then
+		energy = energy + 20
+		if(energy > 100) then
+			energy = 100
+		end
+		energyText.text = "Energy: " .. energy
+	end
+
+	foodConsumed = foodConsumed + 1
+end
+
 local function consumeCoin()
 	coinsConsumed = coinsConsumed + 1
 	coinsText.text = "Coins: " .. coinsConsumed
+end
+
+--[[
+local function hidiRandomMove()
+	local randNum = mRand(4)
+
+	if(hidi.x == 50) then
+		transition.to(hidi, { time=1000, x=100 })
+	elseif(hidi.x == 100) then
+		transition.to(hidi, { time=1000, x=0 })
+	elseif(hidi.x == 0) then
+		transition.to(hidi, { time=1000, x=50 })
+	end
+end]]
+
+local function hidiDeathRun()
+
+	if(hidiTimer) then
+		timer.cancel(hidiTimer)
+	end
+
+	if(hidiTransition) then
+		transition.cancel(hidiTransition)
+	end
+
+	hidi:setSequence("fastRun")
+	hidi:play()
+	transition.to(hidi, { time=1500, x=contW+hidi.width})
+end
+
+local function checkHeroStatus()
+	if(isDashing and energy == 0) then
+		dashEnding()
+	end
 end
 
 local function checkHeroPosition()
@@ -632,12 +725,14 @@ end
 local function performGameOver()
 	print("<<Game Over>>")
 	hero:pause()
-	leftTouchArea:removeEventListener("tap", jump)
-	rightTouchArea:removeEventListener("tap", dash)
+	hidiDeathRun()
+	leftTouchArea:removeEventListener("touch", jump)
+	rightTouchArea:removeEventListener("touch", dash)
 	composer.setVariable("finalScore", math.floor(score))
 	composer.setVariable("finalMetersRun", math.floor(metersRun))
 	composer.setVariable("finalCoinsConsumed", math.floor(coinsConsumed))
-	composer.showOverlay("scenes.gameover")
+	timer.performWithDelay(500, function() composer.showOverlay("scenes.gameover") end, 1) -- Experimental
+	--composer.showOverlay("scenes.gameover")
 	gameOverPerformed = true
 end
 
@@ -654,6 +749,7 @@ end
 local function gameLoop(event)
 	if(not gameOver) then
 		checkHeroPosition()
+		checkHeroStatus()
 		dt = getDeltaTime()
 
 		updateScreen()
@@ -726,7 +822,7 @@ local function onCollision(event)
 		end
 
 		if(didCollide(obj1, obj2, "hero", "coin")) then
-			local coin = nil
+			local coin = nil -- What is this for?
 
 			if(obj1.myName == "coin") then
 				display.remove(obj1)
@@ -734,6 +830,15 @@ local function onCollision(event)
 				display.remove(obj2)
 			end
 			consumeCoin()
+		end
+
+		if(didCollide(obj1, obj2, "hero", "pizza") or didCollide(obj1, obj2, "hero", "hamburger")) then
+			if(obj1.myName == "pizza" or obj1.myName == "hamburger") then
+				display.remove(obj1)
+			else
+				display.remove(obj2)
+			end
+			consumeFood()
 		end
 
 		if(didCollide(obj1, obj2, "hero", "asparagus") or didCollide(obj1, obj2, "hero", "broccoli")) then
@@ -752,7 +857,7 @@ end
 
 local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
-	leftTouchArea:addEventListener("tap", jump)
+	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
 	Runtime:addEventListener("collision", onCollision)
 end
@@ -793,6 +898,7 @@ function scene:create(event)
 	loadMemoryMonitor()
 	loadAnimations()
 	loadHero()
+	loadHidi()
 	loadUI()
 	loadTouchAreas()
 end
@@ -825,9 +931,22 @@ function scene:hide(event)
 		physics.pause()
 		Runtime:removeEventListener("collision", onCollision)
 		Runtime:removeEventListener("enterFrame", gameLoop)
-		timer.cancel(coinTimer)
-		timer.cancel(foodTimer)
-		timer.cancel(cashTimer)
+
+		if(coinTimer) then
+			timer.cancel(coinTimer)
+		end
+
+		if(foodTimer) then
+			timer.cancel(foodTimer)
+		end
+
+		if(cashTimer) then
+			timer.cancel(cashTimer)
+		end
+
+		if(energyTimer) then
+			timer.cancel(energyTimer)
+		end
 
 		if(dashTimer) then
 			timer.cancel(dashTimer)
@@ -836,6 +955,8 @@ function scene:hide(event)
 		coinTimer = nil
 		foodTimer = nil
 		cashTimer = nil
+		energyTimer = nil
+		hidiTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
 		physics.stop()

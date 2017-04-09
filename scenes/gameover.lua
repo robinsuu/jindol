@@ -53,8 +53,8 @@ local function loadText()
 end
 
 local function gotoHighScores()
-	local allowedToQuit = composer.getVariable("allowedToQuit")
-
+	--local allowedToQuit = composer.getVariable("allowedToQuit")
+	local allowedToQuit = true
 	if(allowedToQuit) then
 		composer.gotoScene("scenes.highscore")
 	end
