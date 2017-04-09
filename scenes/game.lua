@@ -355,7 +355,7 @@ local function createGroundSection(name)
 	else
 		newObj.x = groundTable[#groundTable].x + 320 -- This number should be the full width of the ground sections
 	end
-	newObj.y = section.y 
+	newObj.y = section.y
 
 	if(name ~= "hole") then
 		physics.addBody(newObj, "static", { bounce=0, density=0 })
