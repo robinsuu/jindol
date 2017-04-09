@@ -42,17 +42,22 @@ local function initDisplayGroups()
 end
 
 local function loadBackground()
-	background = display.newRect(uiGroup, contCX, contCY, contW/2, contH/2)
+	background = display.newRect(uiGroup, contCX, contCY, contW, contH)
 	background.alpha = 0
+	--background:setFillColor(0.5, 0.5, 0.5)
 	background.isHitTestable = true
 end
 
 local function loadText()
-	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to continue", contCX, display.contentHeight/2, native.systemFont, 72)
+	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to continue", contCX, (display.contentHeight/2)-200, native.systemFont, 72)
 end
 
 local function gotoHighScores()
-	composer.gotoScene("scenes.highscore")
+	local allowedToQuit = composer.getVariable("allowedToQuit")
+
+	if(allowedToQuit) then
+		composer.gotoScene("scenes.highscore")
+	end
 end
 
 local function loadEventListeners()

@@ -156,7 +156,7 @@ local function gotoMenu()
 end
 
 local function loadEventListeners()
-	okText:addEventListener("tap", gotoMenu)
+	 background:addEventListener("tap", gotoMenu)
 end
 
 -- -----------------------------------------------------------------------------------

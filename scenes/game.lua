@@ -17,12 +17,13 @@ local scene = composer.newScene()
 local physics = require("physics")
 local physicsDef = require("scripts.physicsdef").physicsData(1.0)
 local objectSheetInfo = require("scripts.objects")
+local heroSheetInfo = require("scripts.hero")
 
 ----
 -- Physics
 ----
 physics.start()
-physics.setGravity(0, 120) -- Default: Earth gravity (0, 9.8). Normal value: 0, 50
+physics.setGravity(0, 120) -- Default: Earth gravity (0, 9.8). Normal value: 0, 120
 physics.setDrawMode("normal")
 
 ----
@@ -56,16 +57,18 @@ local metersRun, meterText
 local coinsConsumed, coinsText
 local foodConsumed, foodText -- To be implemented
 local score, scoreText
-
-----
--- Animations
-----
-local sheetOptions_hero, sheet_hero, sequences_hero
+local velocityX, velocityY -- Keeps track of hero speed
 
 ----
 -- Image sheets
 ----
 local objectImageSheet
+local heroImageSheet
+
+----
+-- Animations
+----
+local heroSequences
 
 ----
 -- Tables
@@ -75,11 +78,13 @@ local groundTable -- Holds the actual ground sections displayed in the world
 local coinPatterns -- Holds the coordinates for different coin patterns
 local coinTable -- Holds the coins displayed in the world
 local obstacleTable -- Holds the obstacles displayed in the world
+local foodTable -- Holds the food displayed in the world
+local cashTable -- Holds the cash displayed in the world
 
 ----
 -- Timers
 ----
-local coinTimer, dashTimer
+local coinTimer, dashTimer, foodTimer, cashTimer
 
 ----
 -- Display groups
@@ -110,6 +115,8 @@ local function initVariables()
 	groundBuffer = 10
 	coinTable = {}
 	obstacleTable = {}
+	foodTable = {}
+	cashTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	isJumping = false
@@ -122,12 +129,18 @@ local function initVariables()
 	coinsConsumed = 0
 	foodConsumed = 0
 	score = 0
+	velocityX = 0
+	velocityY = 0
 	coinTimer = nil
 	dashTimer = nil
+	foodTimer = nil
+	cashTimer = nil
+	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
 end
 
 local function initImageSheets()
 	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
+	heroImageSheet = graphics.newImageSheet("images/hero/hero.png", heroSheetInfo:getSheet())
 end
 
 local function initGroundSections()
@@ -193,52 +206,11 @@ end
 -- Animation functions
 ----
 local function loadAnimations()
-	sheetOptions_hero =
-	{
-		sheetContentWidth = 2000,
-		sheetContentHeight = 1000,
-		width = 250, -- The width of each frame
-		height = 250, -- The height of each frame
-		numFrames = 30 -- Total number of frames/images in the spritesheet
-	}
-
-	sheet_hero = graphics.newImageSheet("images/hero/hero.png", sheetOptions_hero)
-
-	sequences_hero =
-	{
-		{
-			name = "normalRun",
-			start = 21,
-			count = 10, -- How many frames that should be animated
-			loopCount = 0, -- Number of times to loop (0 means infinite)
-			loopDirection = "forward", -- "forward" loops from start to end, "bounce" loops from start to end, then backwards to the start again
-		},
-		{
-			name = "jumpUp",
-			start = 1,
-			count = 12,
-			loopCount = 1
-		},
-		{
-			name = "jumpDown",
-			start = 13,
-			count = 8,
-			time = 400, -- This must be tweaked, or replaced with a transition
-			loopCount = 1
-		},
-		{
-			name = "dashRun",
-			start = 21,
-			count = 10,
-			loopCount = 0,
-			time = 100, -- This must be tweaked, or replaced with a transition
-			--loopCount = 1
-		},
-	}
+	heroSequences = require("scripts.herosequences")
 end
 
 local function loadHero()
-	hero = display.newSprite(heroGroup, sheet_hero, sequences_hero)
+	hero = display.newSprite(heroGroup, heroImageSheet, heroSequences)
 	hero.x = 300 -- Default: 300
 	hero.y = contH-157 -- Default: contH-157
 	hero.myName = "hero"
@@ -267,6 +239,55 @@ local function loadUI()
 	coinsText.anchorX = 0 -- Aligned left
 	scoreText = display.newEmbossedText(uiGroup, "Score: 0", 10, 70, native.systemFont, 30)
 	scoreText.anchorX = 0 -- Aligned left
+end
+
+local function getObjectIndex(type)
+	return objectSheetInfo:getFrameIndex(type)
+end
+
+local function getObjectProperties(index)
+	return objectSheetInfo:getSheet().frames[index]
+end
+
+local function createCash(yPos)
+	local index = getObjectIndex("cash")
+	local properties = getObjectProperties(index)
+	local newCash = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
+
+	newCash.x = contW+100
+	newCash.y = yPos
+	newCash.myName = "cash"
+	physics.addBody(newCash, "static", { isSensor=true, radius=25, bounce=0 })
+	table.insert(cashTable, newCash)
+end
+
+local function createRandomCash()
+	local randYPos = (contCY+100)-(mRand(300))
+
+	createCash(randYPos)
+end
+
+local function createFood(yPos, type)
+	local index = getObjectIndex(type)
+	local properties = getObjectProperties(index)
+	local newFood = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
+
+	newFood.x = contW+100
+	newFood.y = yPos
+	newFood.myName = type
+	physics.addBody(newFood, "static", { isSensor=true, radius=25, bounce=0 })
+	table.insert(foodTable, newFood)
+end
+
+local function createRandomFood()
+	local randNum = mRand(2)
+	local randYPos = (contCY+100)-(mRand(300))
+
+	if(randNum == 1) then
+		createFood(randYPos, "pizza")
+	elseif(randNum == 2) then
+		createFood(randYPos, "hamburger")
+	end
 end
 
 local function createCoin(xPos, yPos)
@@ -298,8 +319,8 @@ local function createRandomCoinPattern()
 end
 
 local function createObstacle(obstacleType, xPos)
-	local index = objectSheetInfo:getFrameIndex(obstacleType)
-	local properties = objectSheetInfo:getSheet().frames[index]
+	local index = getObjectIndex(obstacleType)
+	local properties = getObjectProperties(index)
 	local newObstacle = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
 	newObstacle.x = xPos
 	newObstacle.y = contH-(properties.height-35)
@@ -392,7 +413,32 @@ local function updateObstacles()
 		obstacle.x = (obstacle.x or 0) - (10 * gameSpeed) * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
 
 		if(obstacle.x <= -100) then
+			-- Why no display.remove(obstable) ???
 			table.remove(obstacleTable, i)
+		end
+	end
+end
+
+local function updateCash()
+	for i=#cashTable, 1, -1 do	
+		local cash = cashTable[i]
+		cash.x = (cash.x or 0) - (10 * gameSpeed) * dt -- If cash.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
+
+		if(cash.x <= -100) then
+			display.remove(cash)
+			table.remove(cashTable, i)
+		end
+	end
+end
+
+local function updateFood()
+	for i=#foodTable, 1, -1 do	
+		local food = foodTable[i]
+		food.x = (food.x or 0) - (10 * gameSpeed) * dt -- If food.x is false it will use 0 as a fallback value (food.x will be false after food has been consumed)
+
+		if(food.x <= -100) then
+			display.remove(food)
+			table.remove(foodTable, i)
 		end
 	end
 end
@@ -470,15 +516,28 @@ local function updateScore()
 	scoreText.text = "Score: " .. math.floor(score)
 end
 
+local function updateScreen()
+	updateGround()
+	updateCoins()
+	updateFood()
+	updateCash()
+	updateObstacles()
+	updateBackground()
+	updateForeground()
+	updateScenery()
+	updateScore()
+end
+
 local function performJump()
 	if(not isDashing) then
 		hero:setSequence("jumpUp")
 		hero:play()
 	end
 	
-	jumpTransition = transition.to(hero, { time=600, y=hero.y-300, transition=easing.outQuart })
+	jumpTransition = transition.to(hero, { time=400, y=hero.y-350, transition=easing.outQuart })
 end
 
+--[[
 local function jump(event)
 	local velocityX, velocityY = hero:getLinearVelocity()
 
@@ -499,6 +558,13 @@ local function jump(event)
 			hero:play()
 		end
 	end
+end--]]
+
+local function jump(event)
+	if(not isJumping and not gameOver and hero.y < 465 and hero.y > 464) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
+		performJump()
+		isJumping = true
+	end
 end
 
 local function dashEnding()
@@ -509,14 +575,17 @@ local function dashEnding()
 	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
-	timer.cancel(dashTimer)
+	
+	if(dashTimer) then
+		timer.cancel(dashTimer)
+	end
 	--hero.alpha = 1
 end
 
 local function performDash()
 	hero:setSequence("dashRun")
 	hero:play()
-	gameSpeed = 1.5
+	gameSpeed = 2.5
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
 	--hero.alpha = 0.5
@@ -540,13 +609,23 @@ end
 
 local function checkHeroPosition()
 	-- Check if the player has fallen down a gap
-	if(hero.y > contH-64) then
+	if(hero.y > contH+hero.height) then
 		gameOver = true
+		composer.setVariable("allowedToQuit", true)
 	end
 
 	-- Adjust hero position if offset
 	if(hero.x > 301 or hero.x < 299 and hero.y <= contH-157) then
 		hero.x = 300
+	end
+
+	if(isJumping) then
+		velocityX, velocityY = hero:getLinearVelocity()
+
+		-- If the character stands still it's OK to jump
+		if(velocityY == 0) then
+			isJumping = false
+		end
 	end
 end
 
@@ -576,13 +655,9 @@ local function gameLoop(event)
 	if(not gameOver) then
 		checkHeroPosition()
 		dt = getDeltaTime()
-		updateGround()
-		updateCoins()
-		updateObstacles()
-		updateBackground()
-		updateForeground()
-		updateScenery()
-		updateScore()
+
+		updateScreen()
+
 	elseif(gameOver and not gameOverPerformed) then
 		performGameOver()
 	end
@@ -617,7 +692,23 @@ local function collideWithObstacle(obstacle)
 
 	if(not isDashing) then
 		gameOver = true
-		heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+			timer.performWithDelay(1, function()
+			physics.pause()
+			--physics.removeBody(hero)
+			hero.x = contCX
+			hero.y = contCY
+			hero:setSequence("pop")
+			hero:play()
+			--heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+			heroCollisionTransition = transition.to(hero, { 
+				delay=1500, 
+				time=2500, 
+				y=contH+hero.height, 
+				onComplete=function() 
+					--hero:pause()
+					composer.setVariable("allowedToQuit", true)
+				end })
+		end, 1)
 	end
 end
 
@@ -661,7 +752,7 @@ end
 
 local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
-	leftTouchArea:addEventListener("touch", jump)
+	leftTouchArea:addEventListener("tap", jump)
 	rightTouchArea:addEventListener("touch", dash)
 	Runtime:addEventListener("collision", onCollision)
 end
@@ -669,6 +760,8 @@ end
 -- Important: Omit the () after timer callback functions or it will malfunction
 local function loadTimers()
 	coinTimer = timer.performWithDelay(5000, createRandomCoinPattern, 0)
+	foodTimer = timer.performWithDelay(5000, createRandomFood, 0)
+	cashTimer = timer.performWithDelay(7000, createRandomCash, 0)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -685,8 +778,8 @@ function scene:create(event)
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(groundGroup)
 	sceneGroup:insert(uiGroup)
-	sceneGroup:insert(heroGroup)
 	sceneGroup:insert(mainGroup)
+	sceneGroup:insert(heroGroup)
 
 	initVariables()
 	initImageSheets()
@@ -733,9 +826,16 @@ function scene:hide(event)
 		Runtime:removeEventListener("collision", onCollision)
 		Runtime:removeEventListener("enterFrame", gameLoop)
 		timer.cancel(coinTimer)
-		timer.cancel(dashTimer)
+		timer.cancel(foodTimer)
+		timer.cancel(cashTimer)
+
+		if(dashTimer) then
+			timer.cancel(dashTimer)
+		end
 		dashTimer = nil
 		coinTimer = nil
+		foodTimer = nil
+		cashTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
 		physics.stop()

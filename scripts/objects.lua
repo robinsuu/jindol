@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:cc9dbd471b410be07dec79002627c937:6c053e703b5515f50eaa183546b719fc:02ee67bb1d744d8a086f79ef6d2fcbaa$
+-- $TexturePacker:SmartUpdate:ab29e7e1cf35005a8759cae3496bdef7:29c7c0df9e68de9921af2b3b81f952d5:02ee67bb1d744d8a086f79ef6d2fcbaa$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -16,7 +16,7 @@ SheetInfo.sheet =
     
         {
             -- asparagus
-            x=458,
+            x=542,
             y=1,
             width=38,
             height=183,
@@ -24,24 +24,44 @@ SheetInfo.sheet =
         },
         {
             -- broccoli
-            x=323,
+            x=1,
             y=1,
             width=133,
             height=186,
 
         },
         {
+            -- cash
+            x=425,
+            y=133,
+            width=104,
+            height=94,
+
+            sourceX = 11,
+            sourceY = 9,
+            sourceWidth = 125,
+            sourceHeight = 112
+        },
+        {
             -- coin
-            x=458,
-            y=186,
+            x=136,
+            y=133,
             width=50,
             height=50,
 
         },
         {
+            -- hamburger
+            x=323,
+            y=133,
+            width=100,
+            height=100,
+
+        },
+        {
             -- hole
-            x=305,
-            y=189,
+            x=188,
+            y=133,
             width=3,
             height=3,
 
@@ -52,8 +72,8 @@ SheetInfo.sheet =
         },
         {
             -- leftedge
-            x=1,
-            y=67,
+            x=136,
+            y=1,
             width=302,
             height=64,
 
@@ -65,15 +85,27 @@ SheetInfo.sheet =
         {
             -- middle
             x=1,
-            y=1,
+            y=189,
             width=320,
             height=64,
 
         },
         {
+            -- pizza
+            x=440,
+            y=1,
+            width=100,
+            height=94,
+
+            sourceX = 0,
+            sourceY = 3,
+            sourceWidth = 100,
+            sourceHeight = 100
+        },
+        {
             -- rightedge
-            x=1,
-            y=133,
+            x=136,
+            y=67,
             width=302,
             height=64,
 
@@ -84,8 +116,8 @@ SheetInfo.sheet =
         },
     },
     
-    sheetContentWidth = 509,
-    sheetContentHeight = 237
+    sheetContentWidth = 581,
+    sheetContentHeight = 254
 }
 
 SheetInfo.frameIndex =
@@ -93,11 +125,14 @@ SheetInfo.frameIndex =
 
     ["asparagus"] = 1,
     ["broccoli"] = 2,
-    ["coin"] = 3,
-    ["hole"] = 4,
-    ["leftGround"] = 5,
-    ["middleGround"] = 6,
-    ["rightGround"] = 7,
+    ["cash"] = 3,
+    ["coin"] = 4,
+    ["hamburger"] = 5,
+    ["hole"] = 6,
+    ["leftGround"] = 7,
+    ["middleGround"] = 8,
+    ["pizza"] = 9,
+    ["rightGround"] = 10,
 }
 
 function SheetInfo:getSheet()
