@@ -29,5 +29,18 @@ print("Design area: W:" .. display.contentWidth .. " H:" .. display.contentHeigh
 print("Actual area: W:" .. display.actualContentWidth .. " H:" .. display.actualContentHeight)
 print("________________________________")
 
+local function initGlobals()
+	composer.setVariable("finalScore", 0)
+	composer.setVariable("finalMetersRun", 0)
+	composer.setVariable("finalCoinsConsumed", 0)
+	composer.setVariable("finalCashConsumed", 0)
+	composer.setVariable("lastScore", 0)
+	composer.setVariable("totalMetersRun", 0)
+	composer.setVariable("totalCoinsConsumed", 0)
+	composer.setVariable("totalCashConsumed", 0)
+end
+
+initGlobals()
+
 -- Starts at the main menu screen
 composer.gotoScene("scenes.mainmenu")

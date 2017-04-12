@@ -57,6 +57,7 @@ local lastGroundType
 local metersRun, meterText
 local energy, energyText
 local coinsConsumed, coinsText
+local cashConsumed, cashText
 local foodConsumed, foodText -- To be implemented
 local score, scoreText
 local velocityX, velocityY -- Keeps track of hero speed
@@ -90,7 +91,7 @@ local coinTimer, dashTimer, foodTimer, cashTimer, energyTimer, hidiTimer
 ----
 -- Display groups
 ----
-local backGroup, uiGroup, mainGroup, groundGroup, heroGroup
+local backGroup, uiGroup, mainGroup, groundGroup
 
 ----
 -- Functions
@@ -101,7 +102,6 @@ local function initDisplayGroups()
 	uiGroup = display.newGroup()
 	mainGroup = display.newGroup()
 	groundGroup = display.newGroup()
-	heroGroup = display.newGroup()
 end
 
 local function getDeltaTime()
@@ -129,6 +129,7 @@ local function initVariables()
 	dt = getDeltaTime()
 	metersRun = 0
 	coinsConsumed = 0
+	cashConsumed = 0
 	foodConsumed = 0
 	energy = 0 -- Default 0
 	score = 0
@@ -217,7 +218,7 @@ local function loadAnimations()
 end
 
 local function loadHero()
-	hero = display.newSprite(heroGroup, heroImageSheet, heroSequences)
+	hero = display.newSprite(mainGroup, heroImageSheet, heroSequences)
 	hero.x = 300 -- Default: 300
 	hero.y = contH-157 -- Default: contH-157
 	hero.myName = "hero"
@@ -252,8 +253,10 @@ local function loadUI()
 	meterText.anchorX = 0.5 -- Aligned center
 	coinsText = display.newEmbossedText(uiGroup, "Coins: 0", 10, 30, native.systemFont, 30)
 	coinsText.anchorX = 0 -- Aligned left
-	scoreText = display.newEmbossedText(uiGroup, "Score: 0", 10, 70, native.systemFont, 30)
-	scoreText.anchorX = 0 -- Aligned left
+	cashText = display.newEmbossedText(uiGroup, "Cash: 0", 10, 70, native.systemFont, 30)
+	cashText.anchorX = 0 -- Aligned left
+	scoreText = display.newEmbossedText(uiGroup, "Score: 0", contCX, 70, native.systemFont, 30)
+	scoreText.anchorX = 0.5 -- Aligned middle
 	energyText = display.newEmbossedText(uiGroup, "Energy: 0", contW-70, 70, native.systemFont, 30)
 	energyText.anchorX = 1 -- Aligned right
 end
@@ -529,7 +532,7 @@ local function updateScore()
 	metersRun = metersRun + (0.05 * gameSpeed) * dt -- Meter updates depending on game speed
 	meterText.text = math.floor(metersRun) .. " meters"
 
-	score = (metersRun) + ((foodConsumed * 5) + coinsConsumed * 2)
+	score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))
 	scoreText.text = "Score: " .. math.floor(score)
 
 	energyText.text = "Energy: " .. energy
@@ -547,19 +550,26 @@ local function updateScreen()
 	updateScore()
 end
 
-local function hidiMoveBack()
+local function cancelHidiMovement()
+	if(hidiTimer) then
+		timer.cancel(hidiTimer)
+	end
+
 	if(hidiTransition) then
 		transition.cancel(hidiTransition)
 	end
+end
+
+local function hidiMoveBack()
+	cancelHidiMovement()
 
 	hidiTransition = transition.to(hidi, { time=500, x=-hidi.width })
 end
 
 local function hidiMoveForward()
+	cancelHidiMovement()
+
 	hidiTimer = timer.performWithDelay(1000, function() 
-		if(hidiTransition) then
-			transition.cancel(hidiTransition)
-		end
 		hidiTransition = transition.to(hidi, { time=2000, x=50 })
 		end, 1)
 end
@@ -607,12 +617,11 @@ local function dashEnding()
 	if(not gameOver) then
 		hero:setSequence("normalRun")
 		hero:play()
+		hidiMoveForward()
 	end
 	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
-
-	hidiMoveForward()
 	
 	if(dashTimer) then
 		timer.cancel(dashTimer)
@@ -632,7 +641,10 @@ local function performDash()
 		timer.cancel(hidiTimer)
 	end
 
-	hidiMoveBack()
+	if(not gameOver) then
+		hidiMoveBack()
+	end
+
 	dashTransition = transition.to(hero, { time=1000, y=hero.y })
 	dashTimer = timer.performWithDelay(1000, dashEnding, 1)
 end
@@ -650,45 +662,35 @@ local function dash(event)
 end
 
 local function consumeFood()
-	if(energy < 100) then
-		energy = energy + 20
-		if(energy > 100) then
-			energy = 100
+	if(not gameOver) then
+		if(energy < 100) then
+			energy = energy + 20
+			if(energy > 100) then
+				energy = 100
+			end
+			energyText.text = "Energy: " .. energy
 		end
-		energyText.text = "Energy: " .. energy
-	end
 
-	foodConsumed = foodConsumed + 1
+		foodConsumed = foodConsumed + 1
+	end
 end
 
 local function consumeCoin()
-	coinsConsumed = coinsConsumed + 1
-	coinsText.text = "Coins: " .. coinsConsumed
+	if(not gameOver) then
+		coinsConsumed = coinsConsumed + 1
+		coinsText.text = "Coins: " .. coinsConsumed
+	end
 end
 
---[[
-local function hidiRandomMove()
-	local randNum = mRand(4)
-
-	if(hidi.x == 50) then
-		transition.to(hidi, { time=1000, x=100 })
-	elseif(hidi.x == 100) then
-		transition.to(hidi, { time=1000, x=0 })
-	elseif(hidi.x == 0) then
-		transition.to(hidi, { time=1000, x=50 })
+local function consumeCash()
+	if(not gameOver) then
+		cashConsumed = cashConsumed + 1
+		cashText.text = "Cash: " .. cashConsumed
 	end
-end]]
+end
 
 local function hidiDeathRun()
-
-	if(hidiTimer) then
-		timer.cancel(hidiTimer)
-	end
-
-	if(hidiTransition) then
-		transition.cancel(hidiTransition)
-	end
-
+	cancelHidiMovement()
 	hidi:setSequence("fastRun")
 	hidi:play()
 	transition.to(hidi, { time=1500, x=contW+hidi.width})
@@ -730,8 +732,9 @@ local function performGameOver()
 	rightTouchArea:removeEventListener("touch", dash)
 	composer.setVariable("finalScore", math.floor(score))
 	composer.setVariable("finalMetersRun", math.floor(metersRun))
-	composer.setVariable("finalCoinsConsumed", math.floor(coinsConsumed))
-	timer.performWithDelay(500, function() composer.showOverlay("scenes.gameover") end, 1) -- Experimental
+	composer.setVariable("finalCoinsConsumed", coinsConsumed)
+	composer.setVariable("finalCashConsumed", cashConsumed)
+	timer.performWithDelay(1000, function() composer.showOverlay("scenes.gameover") end, 1) -- Experimental
 	--composer.showOverlay("scenes.gameover")
 	gameOverPerformed = true
 end
@@ -787,6 +790,7 @@ local function collideWithObstacle(obstacle)
 	end })
 
 	if(not isDashing) then
+		hero:toFront()
 		gameOver = true
 			timer.performWithDelay(1, function()
 			physics.pause()
@@ -822,14 +826,21 @@ local function onCollision(event)
 		end
 
 		if(didCollide(obj1, obj2, "hero", "coin")) then
-			local coin = nil -- What is this for?
-
 			if(obj1.myName == "coin") then
 				display.remove(obj1)
 			else
 				display.remove(obj2)
 			end
 			consumeCoin()
+		end
+
+		if(didCollide(obj1, obj2, "hero", "cash")) then
+			if(obj1.myName == "cash") then
+				display.remove(obj1)
+			else
+				display.remove(obj2)
+			end
+			consumeCash()
 		end
 
 		if(didCollide(obj1, obj2, "hero", "pizza") or didCollide(obj1, obj2, "hero", "hamburger")) then
@@ -882,9 +893,8 @@ function scene:create(event)
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(groundGroup)
-	sceneGroup:insert(uiGroup)
 	sceneGroup:insert(mainGroup)
-	sceneGroup:insert(heroGroup)
+	sceneGroup:insert(uiGroup)
 
 	initVariables()
 	initImageSheets()
@@ -901,6 +911,9 @@ function scene:create(event)
 	loadHidi()
 	loadUI()
 	loadTouchAreas()
+
+	hero:toBack()
+	hidi:toBack()
 end
 
 -- show()
@@ -964,8 +977,7 @@ function scene:hide(event)
 		display.remove(groundGroup)
 		display.remove(uiGroup)
 		display.remove(mainGroup)
-		display.remove(heroGroup)
-		backGroup, groundGroup, uiGroup, mainGroup, heroGroup = nil, nil, nil, nil, nil
+		backGroup, groundGroup, uiGroup, mainGroup = nil, nil, nil, nil
 	end
 end
 

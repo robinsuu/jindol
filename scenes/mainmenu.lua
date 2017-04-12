@@ -19,6 +19,7 @@ local scene = composer.newScene()
 -- Requires
 ----
 local menuSheetInfo = require("scripts.menubuttons")
+local heroData = require("scripts.herodata")
 
 ----
 -- Forward declarations
@@ -32,9 +33,10 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local titleText
-local titleImage
+local titleText, titleImage
 local playButton, highScoreButton, settingsButton, shareButton, shopButton, howToPlayButton
+local coins, cash
+local coinsText, cashText
 
 ----
 -- Image sheets
@@ -53,6 +55,13 @@ local backGroup, uiGroup
 local function initDisplayGroups()
 	backGroup = display.newGroup()
 	uiGroup = display.newGroup()
+end
+
+local function loadHeroData()
+	heroData:loadHeroFromFile()
+
+	coins = composer.getVariable("totalCoinsConsumed")
+	cash = composer.getVariable("totalCashConsumed")
 end
 
 local function initImageSheets()
@@ -90,6 +99,11 @@ local function loadUI()
 	titleImage = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("34"), 338, 300)
 	titleImage.x = contCX
 	titleImage.y = contCY-50
+
+	coinsText = display.newEmbossedText(uiGroup, "Coins: " .. coins, 10, 140, native.systemFontBold, 36)
+	coinsText.anchorX = 0
+	cashText = display.newEmbossedText(uiGroup, "Cash: " .. cash, 10, 180, native.systemFontBold, 36)
+	cashText.anchorX = 0
 end
 
 local function gotoGame()
@@ -121,6 +135,7 @@ function scene:create(event)
 	sceneGroup:insert(uiGroup)
 
 	initImageSheets()
+	loadHeroData()
 
 	loadBackground()
 	loadUI()

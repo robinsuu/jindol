@@ -20,6 +20,7 @@ local scene = composer.newScene()
 ----
 local menuSheetInfo = require("scripts.menubuttons")
 local json = require("json")
+local heroData = require("scripts.herodata")
 
 ----
 -- Forward declarations
@@ -33,9 +34,10 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local titleText, finalScoreText, okText
-local filePath
-local finalScore, finalMetersRun, finalCoinsConsumed
+local titleText, scoreText, okText
+local highscoreFilePath
+local score, metersRun, coinsConsumed, cashConsumed
+local totalMeters, totalCoins, totalCash
 
 ----
 -- Tables
@@ -62,8 +64,16 @@ local function initDisplayGroups()
 end
 
 local function initVariables()
-	filePath = system.pathForFile("scores.json", system.DocumentsDirectory)
+	highscoreFilePath = system.pathForFile("scores.json", system.DocumentsDirectory)
 	scoresTable = {}
+	score = 0
+	metersRun = 0
+	coinsConsumed = 0
+	cashConsumed = 0
+	totalScore = 0
+	totalMeters = 0
+	totalCoins = 0
+	totalCash = 0
 end
 
 local function initImageSheets()
@@ -79,11 +89,10 @@ local function loadUI()
 	highScoreTitleText = display.newEmbossedText(uiGroup, "High Scores", contCX, 50, native.systemFont, 72)
 
 	okText = display.newEmbossedText(uiGroup, "Tap to return to main menu", contCX, contH-50, native.systemFont, 72)
-
 end
 
 local function loadScoresFromFile()
-	local file = io.open(filePath, "r")
+	local file = io.open(highscoreFilePath, "r")
 
 	if(file) then
 		local content = file:read("*a")
@@ -101,7 +110,7 @@ local function saveScoresToFile()
 		table.remove(scoresTable, i)
 	end
 
-	local file = io.open(filePath, "w")
+	local file = io.open(highscoreFilePath, "w")
 
 	if(file) then
 		file:write(json.encode(scoresTable))
@@ -114,30 +123,23 @@ local function compare(a, b)
 end
 
 local function loadScores()
-	finalScore = composer.getVariable("finalScore")
-	finalMetersRun = composer.getVariable("finalMetersRun")
-	finalCoinsConsumed = composer.getVariable("finalCoinsConsumed")
+	score = composer.getVariable("lastScore")
 
-	table.insert(scoresTable, finalScore) -- Insert new score in table
-
-	-- Reset globals
-	composer.setVariable("finalScore", 0)
-	composer.setVariable("finalMetersRun", 0)
-	composer.setVariable("finalCoinsConsumed", 0)
+	table.insert(scoresTable, score) -- Insert new score in table
 
 	table.sort(scoresTable, compare) -- Sort scores in order
 
 	saveScoresToFile()
 
-	if(finalScore and finalScore ~= 0) then
-		finalScoreText = display.newText(uiGroup, "Your score: " .. finalScore, display.contentCenterX, 150, native.systemFont, 36)
+	if(score and score ~= 0) then
+		scoreText = display.newText(uiGroup, "Your score: " .. score, display.contentCenterX, 150, native.systemFont, 36)
 	end
 
 	for i=1, 5 do
 		if(scoresTable[i]) then
 			local yPos = 200 + (i * 56)
 
-			if(not finalScore or finalScore == 0) then
+			if(not score or score == 0) then
 				yPos = 100 + (i * 56)
 			end
 
@@ -149,6 +151,14 @@ local function loadScores()
 			thisScore.anchorX = 0
 		end
 	end
+end
+
+local function loadHeroData()
+	totalMeters = composer.getVariable("totalMetersRun")
+	totalCoins = composer.getVariable("totalCoinsConsumed")
+	totalCash = composer.getVariable("totalCashConsumed")
+
+	print("<Last score:> " .. score .. " <Meters:> " .. totalMeters .. " <Coins:> " .. totalCoins .. " <Cash:> " .. totalCash)
 end
 
 local function gotoMenu()
@@ -178,8 +188,10 @@ function scene:create(event)
 
 	loadBackground()
 	loadUI()
+	heroData:saveHeroToFile()
 	loadScoresFromFile()
 	loadScores()
+	loadHeroData()
 end
 
 -- show()
