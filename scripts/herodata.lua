@@ -75,6 +75,12 @@ function M:saveHeroToFile()
 
 	M:clearGlobals()
 
+	if(not heroTable.meters and not heroTable.coins and not heroTable.cash) then
+		oldMeters = 0
+		oldCoins = 0
+		oldCash = 0
+	end
+
 	heroTable.lastScore = score
 	heroTable.meters = oldMeters + meters
 	heroTable.coins = oldCoins + coins

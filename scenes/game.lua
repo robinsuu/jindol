@@ -55,9 +55,9 @@ local dt -- Delta time
 local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType
 local metersRun, meterText
-local energy, energyText
-local coinsConsumed, coinsText
-local cashConsumed, cashText
+local energy, energyMeter
+local coinsConsumed, coinsText, coinsIcon
+local cashConsumed, cashText, cashIcon
 local foodConsumed, foodText -- To be implemented
 local score, scoreText
 local velocityX, velocityY -- Keeps track of hero speed
@@ -246,27 +246,44 @@ local function loadTouchAreas()
 	rightTouchArea.isHitTestable = true
 end
 
-local function loadUI()
-	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
-	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
-	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
-	meterText.anchorX = 0.5 -- Aligned center
-	coinsText = display.newEmbossedText(uiGroup, "Coins: 0", 10, 30, native.systemFont, 30)
-	coinsText.anchorX = 0 -- Aligned left
-	cashText = display.newEmbossedText(uiGroup, "Cash: 0", 10, 70, native.systemFont, 30)
-	cashText.anchorX = 0 -- Aligned left
-	scoreText = display.newEmbossedText(uiGroup, "Score: 0", contCX, 70, native.systemFont, 30)
-	scoreText.anchorX = 0.5 -- Aligned middle
-	energyText = display.newEmbossedText(uiGroup, "Energy: 0", contW-70, 70, native.systemFont, 30)
-	energyText.anchorX = 1 -- Aligned right
-end
-
 local function getObjectIndex(type)
 	return objectSheetInfo:getFrameIndex(type)
 end
 
 local function getObjectProperties(index)
 	return objectSheetInfo:getSheet().frames[index]
+end
+
+local function loadUI()
+	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
+	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
+	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
+	meterText.anchorX = 0.5 -- Aligned center
+
+	local index = getObjectIndex("coin")
+	local properties = getObjectProperties(index)
+	coinsIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("coin"), 35, 35)
+	coinsIcon.x = 10
+	coinsIcon.y = 30
+	coinsIcon.anchorX = 0
+
+	index = getObjectIndex("cash")
+	properties = getObjectProperties(index)
+	cashIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 40, 35)
+	cashIcon.x = 10
+	cashIcon.y = 70
+	cashIcon.anchorX = 0
+
+	coinsText = display.newEmbossedText(uiGroup, "0", 60, 30, native.systemFont, 30)
+	coinsText.anchorX = 0 -- Aligned left
+	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, native.systemFont, 30)
+	cashText.anchorX = 0 -- Aligned left
+	scoreText = display.newEmbossedText(uiGroup, "Score: 0", contCX, 70, native.systemFont, 30)
+	scoreText.anchorX = 0.5 -- Aligned middle
+
+	energyMeter = display.newRect(uiGroup, contW-30, 70, 0, 30)
+	energyMeter:setFillColor(0, 0.8, 0)
+	energyMeter.anchorX = 1
 end
 
 local function createCash(yPos)
@@ -434,6 +451,7 @@ local function updateObstacles()
 
 		if(obstacle.x <= -100) then
 			-- Why no display.remove(obstable) ???
+			display.remove(obstacle)
 			table.remove(obstacleTable, i)
 		end
 	end
@@ -534,8 +552,6 @@ local function updateScore()
 
 	score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))
 	scoreText.text = "Score: " .. math.floor(score)
-
-	energyText.text = "Energy: " .. energy
 end
 
 local function updateScreen()
@@ -574,6 +590,37 @@ local function hidiMoveForward()
 		end, 1)
 end
 
+local function checkEnergyStatus()
+	if(energy <= 33) then
+		energyMeter:setFillColor(1, 0.2, 0)
+	elseif(energy > 33 and energy < 66) then
+		energyMeter:setFillColor(1, 1, 0)
+	else
+		energyMeter:setFillColor(0, 0.8, 0)
+	end
+end
+
+local function addEnergy(energyAdded)
+	if(energy < 100) then
+		energy = energy + energyAdded
+		energyMeter.width = energyMeter.width + (energyAdded * 3)
+		checkEnergyStatus()
+		if(energy > 100) then
+			energy = 100
+			energyMeter.width = 100 * 3
+			checkEnergyStatus()
+		end
+	end
+end
+
+local function removeEnergy(energyRemoved)
+	if(energy > 0) then
+		energy = energy - energyRemoved
+		energyMeter.width = energyMeter.width - (energyRemoved * 3)
+		checkEnergyStatus()
+	end
+end
+
 local function performJump()
 	if(not isDashing) then
 		hero:setSequence("jumpUp")
@@ -582,29 +629,6 @@ local function performJump()
 	
 	jumpTransition = transition.to(hero, { time=400, y=hero.y-350, transition=easing.outQuart })
 end
-
---[[
-local function jump(event)
-	local velocityX, velocityY = hero:getLinearVelocity()
-
-	-- If the character stands still it's OK to jump
-	if(velocityY == 0) then
-		isJumping = false
-	end
-
-	if(event.phase == "began" and not isJumping and velocityY == 0 and not gameOver) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
-		isJumping = true
-		performJump()
-	end
-
-	if(event.phase == "ended" or event.phase == "cancelled") then
-		transition.cancel(jumpTransition)
-		if(hero.y <= contCY-100 and not isDashing) then
-			hero:setSequence("jumpDown")
-			hero:play()
-		end
-	end
-end--]]
 
 local function jump(event)
 	if(event.phase == "began" and not isJumping and not gameOver and hero.y < 465 and hero.y > 464) then -- Remove if velocityY == 0 for double jump (this is kind of a side effect though and might be better implemented)
@@ -653,7 +677,7 @@ local function dash(event)
 	if(event.phase == "began" and not isDashing and hero.y <= contH-157 and not gameOver and energy >= 1) then
 		isDashing = true
 		performDash()
-		energyTimer = timer.performWithDelay(100, function() energy = energy - 2 end, 0)
+		energyTimer = timer.performWithDelay(100, function() removeEnergy(2) end, 0)
 	end
 
 	if(event.phase == "ended" or event.phase == "cancelled" or hero.y > contH-157) then
@@ -661,31 +685,39 @@ local function dash(event)
 	end
 end
 
-local function consumeFood()
+local function consumeFood(food)
 	if(not gameOver) then
-		if(energy < 100) then
-			energy = energy + 20
-			if(energy > 100) then
-				energy = 100
-			end
-			energyText.text = "Energy: " .. energy
+		transition.to(food, { time=250, x=-100, y=-food.height})
+
+		if(not food.consumed) then
+			addEnergy(20)
+			foodConsumed = foodConsumed + 1
+			food.consumed = true
 		end
-
-		foodConsumed = foodConsumed + 1
 	end
 end
 
-local function consumeCoin()
+local function consumeCoin(coin)
 	if(not gameOver) then
-		coinsConsumed = coinsConsumed + 1
-		coinsText.text = "Coins: " .. coinsConsumed
+		transition.to(coin, { time=250, x=-100, y=-coin.height})
+
+		if(not coin.consumed) then
+			coinsConsumed = coinsConsumed + 1
+			coinsText.text = coinsConsumed
+			coin.consumed = true
+		end
 	end
 end
 
-local function consumeCash()
+local function consumeCash(cash)
 	if(not gameOver) then
-		cashConsumed = cashConsumed + 1
-		cashText.text = "Cash: " .. cashConsumed
+		transition.to(cash, { time=250, x=-100, y=-cash.height})
+
+		if(not cash.consumed) then
+			cashConsumed = cashConsumed + 1
+			cashText.text = cashConsumed
+			cash.consumed = true
+		end
 	end
 end
 
@@ -753,6 +785,7 @@ local function gameLoop(event)
 	if(not gameOver) then
 		checkHeroPosition()
 		checkHeroStatus()
+		--checkEnergyStatus()
 		dt = getDeltaTime()
 
 		updateScreen()
@@ -827,29 +860,27 @@ local function onCollision(event)
 
 		if(didCollide(obj1, obj2, "hero", "coin")) then
 			if(obj1.myName == "coin") then
-				display.remove(obj1)
+				consumeCoin(obj1)
 			else
-				display.remove(obj2)
+				consumeCoin(obj2)
 			end
-			consumeCoin()
 		end
 
 		if(didCollide(obj1, obj2, "hero", "cash")) then
 			if(obj1.myName == "cash") then
-				display.remove(obj1)
+				consumeCash(obj1)
 			else
-				display.remove(obj2)
+				consumeCash(obj2)
 			end
-			consumeCash()
+			
 		end
 
 		if(didCollide(obj1, obj2, "hero", "pizza") or didCollide(obj1, obj2, "hero", "hamburger")) then
 			if(obj1.myName == "pizza" or obj1.myName == "hamburger") then
-				display.remove(obj1)
+				consumeFood(obj1)
 			else
-				display.remove(obj2)
+				consumeFood(obj2)
 			end
-			consumeFood()
 		end
 
 		if(didCollide(obj1, obj2, "hero", "asparagus") or didCollide(obj1, obj2, "hero", "broccoli")) then
