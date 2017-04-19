@@ -11,6 +11,10 @@ local composer = require("composer")
 composer.isDebug = true -- Turn off on release
 composer.recycleOnSceneChange = true -- Try setting this if strange things happen with composer scene changes
 
+--if(system.getInfo("platform") ~= "ios") then
+--	native.setProperty("androidSystemUiVisibility", "immersive")
+--end
+
 display.setStatusBar(display.HiddenStatusBar)
 system.activate("multitouch")
 
@@ -38,6 +42,7 @@ local function initGlobals()
 	composer.setVariable("totalMetersRun", 0)
 	composer.setVariable("totalCoinsConsumed", 0)
 	composer.setVariable("totalCashConsumed", 0)
+	composer.setVariable("gamePaused", false)
 end
 
 initGlobals()

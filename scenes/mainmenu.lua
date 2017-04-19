@@ -20,6 +20,7 @@ local scene = composer.newScene()
 ----
 local menuSheetInfo = require("scripts.menubuttons")
 local heroData = require("scripts.herodata")
+local widget = require("widget")
 
 ----
 -- Forward declarations
@@ -37,6 +38,7 @@ local titleText, titleImage
 local playButton, highScoreButton, settingsButton, shareButton, shopButton, howToPlayButton
 local coins, cash
 local coinsText, cashText
+local sharedItems -- For sharing to social media/messaging
 
 ----
 -- Image sheets
@@ -62,6 +64,15 @@ local function loadHeroData()
 
 	coins = composer.getVariable("totalCoinsConsumed")
 	cash = composer.getVariable("totalCashConsumed")
+end
+
+local function loadSharedItems()
+	sharedItems =
+	{
+	    --{ type = "image", value = { filename = "images/share/shareimg.png", baseDir = system.ResourceDirectory, } },
+	    { type = "string", value = "Come play Jindol Run!" },
+	    { type = "url", value = "https://www.lezhin.com/ko/comic/jindoltoon/" },
+	}
 end
 
 local function initImageSheets()
@@ -106,6 +117,63 @@ local function loadUI()
 	cashText.anchorX = 0
 end
 
+local function displayErrorMessage(isSimulator, device)
+	if(isSimulator) then
+	native.showAlert("Build for device", "This plugin is not supported on the Corona Simulator, please build for an iOS/Android device or the XCode simulator", "OK")
+	elseif(device == "apple") then
+		-- Popup isn't available, show error message
+		native.showAlert("Error", "Can't display the view controller. Are you running iOS 7 or later?", { "OK" })
+	else
+		native.showAlert( "Cannot send *serviceName* message.", "Please setup your android account or check your network connection (on android this means that the package/app (ie Twitter) is not installed on the device)", { "OK" } )
+	end
+end
+
+local function displayShare(event)
+	local isSimulator = system.getInfo("environment") == "simulator"
+	-- Share on Apple phone
+	if(system.getInfo("platform") == "ios") then
+		local popupName = "activity"
+		local isAvailable = native.canShowPopup(popupName)
+
+		if(isAvailable) then
+			local listener = {}
+			function listener:popup(event)
+				print( "name(" .. event.name .. ") type(" .. event.type .. ") activity(" .. tostring(event.activity) .. ") action(" .. tostring(event.action) .. ")" )
+			end
+
+			native.showPopup(popupName,
+			{
+				items = sharedItems,
+				listener = listener,
+				origin = shareButton.contentBounds,
+				permittedArrowDirection = { "up", "down" }
+			})
+		else
+			displayErrorMessage(isSimulator, "apple")
+		end
+	else -- Share on Android phone
+		--local serviceName = event.target.id
+		local isAvailable = native.canShowPopup("social")
+		if(isAvailable) then
+			local listener = {}
+			function listener:popup(event)
+				            print( "name(" .. event.name .. ") type(" .. event.type .. ") action(" .. tostring(event.action) .. ") limitReached(" .. tostring(event.limitReached) .. ")" )
+			end
+
+			native.showPopup("social", 
+			{
+				service = serviceName, -- The service key is ignored on Android
+				message = "Come play Jindol Run!",
+				url = "https://www.lezhin.com/ko/comic/jindoltoon/",
+				listener = listener,
+				image = { { filename = "images/share/shareimg.png", baseDir = system.ResourceDirectory }, },
+			})
+		else
+			displayErrorMessage(isSimulator, "android")
+		end
+	end
+end
+
 local function gotoGame()
 	composer.gotoScene("scenes.game")
 end
@@ -114,10 +182,15 @@ local function gotoHighScore()
 	composer.gotoScene("scenes.highscore")
 end
 
+local function gotoSettings()
+	composer.showOverlay("scenes.settings", { isModal=true })
+end
+
 local function loadEventListeners()
-	--background:addEventListener("tap", gotoGame)
 	playButton:addEventListener("tap", gotoGame)
 	highScoreButton:addEventListener("tap", gotoHighScore)
+	settingsButton:addEventListener("tap", gotoSettings)
+	shareButton:addEventListener("tap", displayShare)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -136,6 +209,7 @@ function scene:create(event)
 
 	initImageSheets()
 	loadHeroData()
+	loadSharedItems()
 
 	loadBackground()
 	loadUI()
@@ -149,7 +223,9 @@ function scene:show(event)
 
 	if (phase == "will") then
 		-- Code here runs when the scene is still off screen (but is about to come on screen)
-
+	--if(system.getInfo("platform") ~= "ios") then
+	--	native.setProperty("androidSystemUiVisibility", "immersive")
+	--end
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
 		composer.removeScene("scenes.game", false) -- Try false if it acts weird

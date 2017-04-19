@@ -19,6 +19,7 @@ local physicsDef = require("scripts.physicsdef").physicsData(1.0)
 local objectSheetInfo = require("scripts.objects")
 local heroSheetInfo = require("scripts.hero")
 local hidiSheetInfo = require("scripts.hidi")
+local menuSheetInfo = require("scripts.menubuttons")
 
 ----
 -- Physics
@@ -61,11 +62,12 @@ local cashConsumed, cashText, cashIcon
 local foodConsumed, foodText -- To be implemented
 local score, scoreText
 local velocityX, velocityY -- Keeps track of hero speed
+local pauseButton, isPaused -- isPaused determines whether the entire game is paused or not
 
 ----
 -- Image sheets
 ----
-local objectImageSheet, heroImageSheet, hidiImageSheet
+local objectImageSheet, heroImageSheet, hidiImageSheet, menuButtonImageSheet
 
 ----
 -- Animations
@@ -131,7 +133,7 @@ local function initVariables()
 	coinsConsumed = 0
 	cashConsumed = 0
 	foodConsumed = 0
-	energy = 0 -- Default 0
+	energy = 100 -- Default 0
 	score = 0
 	velocityX = 0
 	velocityY = 0
@@ -141,6 +143,7 @@ local function initVariables()
 	cashTimer = nil
 	energyTimer = nil
 	hidiTimer = nil
+	isPaused = false
 	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
 end
 
@@ -148,6 +151,7 @@ local function initImageSheets()
 	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
 	heroImageSheet = graphics.newImageSheet("images/hero/hero.png", heroSheetInfo:getSheet())
 	hidiImageSheet = graphics.newImageSheet("images/background/hidi.png", hidiSheetInfo:getSheet())
+	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
 end
 
 local function initGroundSections()
@@ -281,9 +285,13 @@ local function loadUI()
 	scoreText = display.newEmbossedText(uiGroup, "Score: 0", contCX, 70, native.systemFont, 30)
 	scoreText.anchorX = 0.5 -- Aligned middle
 
-	energyMeter = display.newRect(uiGroup, contW-30, 70, 0, 30)
+	energyMeter = display.newRect(uiGroup, contW-30, 70, (energy * 3), 30)
 	energyMeter:setFillColor(0, 0.8, 0)
 	energyMeter.anchorX = 1
+
+	pauseButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 50, 50)
+	pauseButton.x = contW-300
+	pauseButton.y = 25
 end
 
 local function createCash(yPos)
@@ -435,7 +443,7 @@ end
 local function updateGround()
 	for i=#groundTable, 1, -1 do
 		local section = groundTable[i]
-		section.x = section.x - (mainSpeed * gameSpeed) * dt
+		section.x = section.x - (mainSpeed * gameSpeed)-- * dt
 
 		if(section.x <= -640) then
 			table.remove(groundTable, i)
@@ -447,7 +455,7 @@ end
 local function updateObstacles()
 	for i=#obstacleTable, 1, -1 do
 		local obstacle = obstacleTable[i]
-		obstacle.x = (obstacle.x or 0) - (mainSpeed * gameSpeed) * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
+		obstacle.x = (obstacle.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
 
 		if(obstacle.x <= -100) then
 			-- Why no display.remove(obstable) ???
@@ -460,7 +468,7 @@ end
 local function updateCash()
 	for i=#cashTable, 1, -1 do	
 		local cash = cashTable[i]
-		cash.x = (cash.x or 0) - (mainSpeed * gameSpeed) * dt -- If cash.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
+		cash.x = (cash.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If cash.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
 
 		if(cash.x <= -100) then
 			display.remove(cash)
@@ -472,7 +480,7 @@ end
 local function updateFood()
 	for i=#foodTable, 1, -1 do	
 		local food = foodTable[i]
-		food.x = (food.x or 0) - (mainSpeed * gameSpeed) * dt -- If food.x is false it will use 0 as a fallback value (food.x will be false after food has been consumed)
+		food.x = (food.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If food.x is false it will use 0 as a fallback value (food.x will be false after food has been consumed)
 
 		if(food.x <= -100) then
 			display.remove(food)
@@ -484,7 +492,7 @@ end
 local function updateCoins()
 	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
-		coin.x = (coin.x or 0) - (mainSpeed * gameSpeed) * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
+		coin.x = (coin.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
 
 		if(coin.x <= -100) then
 			display.remove(coin)
@@ -494,9 +502,9 @@ local function updateCoins()
 end
 
 local function updateBackground()
-	clouds1.x = clouds1.x - (1 * gameSpeed) * dt
-	clouds2.x = clouds2.x - (1 * gameSpeed) * dt
-	clouds3.x = clouds3.x - (1 * gameSpeed) * dt
+	clouds1.x = clouds1.x - (1 * gameSpeed)-- * dt
+	clouds2.x = clouds2.x - (1 * gameSpeed)-- * dt
+	clouds3.x = clouds3.x - (1 * gameSpeed)-- * dt
 
 	if(clouds1.x < -414) then
 		clouds1.x = clouds3.x + 828
@@ -512,9 +520,9 @@ local function updateBackground()
 end
 
 local function updateScenery()
-	scenery1.x = scenery1.x - (2 * gameSpeed) * dt
-	scenery2.x = scenery2.x - (2 * gameSpeed)* dt
-	scenery3.x = scenery3.x - (2 * gameSpeed) * dt
+	scenery1.x = scenery1.x - (2 * gameSpeed)-- * dt
+	scenery2.x = scenery2.x - (2 * gameSpeed)-- * dt
+	scenery3.x = scenery3.x - (2 * gameSpeed)-- * dt
 
 	if(scenery1.x < -568) then
 		scenery1.x = scenery3.x + 1136	end
@@ -529,9 +537,9 @@ local function updateScenery()
 end
 
 local function updateForeground()
-	foreground1.x = foreground1.x - (3 * gameSpeed) * dt
-	foreground2.x = foreground2.x - (3 * gameSpeed)* dt
-	foreground3.x = foreground3.x - (3 * gameSpeed) * dt
+	foreground1.x = foreground1.x - (3 * gameSpeed)-- * dt
+	foreground2.x = foreground2.x - (3 * gameSpeed)-- * dt
+	foreground3.x = foreground3.x - (3 * gameSpeed)-- * dt
 
 	if(foreground1.x < -568) then
 		foreground1.x = foreground3.x + 1136
@@ -547,7 +555,7 @@ local function updateForeground()
 end
 
 local function updateScore()
-	metersRun = metersRun + (0.05 * gameSpeed) * dt -- Meter updates depending on game speed
+	metersRun = metersRun + (0.05 * gameSpeed)-- * dt -- Meter updates depending on game speed
 	meterText.text = math.floor(metersRun) .. " meters"
 
 	score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))
@@ -590,13 +598,49 @@ local function hidiMoveForward()
 		end, 1)
 end
 
+local function popDeath()
+	hero:toFront()
+	gameOver = true
+		timer.performWithDelay(1, function()
+		physics.pause()
+		--physics.removeBody(hero)
+		hero.x = contCX
+		hero.y = contCY
+		hero:setSequence("pop")
+		hero:play()
+		--heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
+		heroCollisionTransition = transition.to(hero, { 
+			delay=1500, 
+			time=2500, 
+			y=contH+hero.height, 
+			onComplete=function() 
+				--hero:pause()
+				composer.setVariable("allowedToQuit", true)
+			end })
+	end, 1)
+end
+
 local function checkEnergyStatus()
+
+	--[[
 	if(energy <= 33) then
 		energyMeter:setFillColor(1, 0.2, 0)
 	elseif(energy > 33 and energy < 66) then
 		energyMeter:setFillColor(1, 1, 0)
 	else
 		energyMeter:setFillColor(0, 0.8, 0)
+	end--]]
+
+	local energyGradient = {
+		type = "gradient",
+		color1 = { 1, 0.8, 1 }, -- 1, 0.8, 0
+		color2 = { 1, 1, 1 }, -- 1, 1, 1
+		direction = "right"
+	}
+	energyMeter.fill = energyGradient
+
+	if(energy <= 0) then
+		popDeath()
 	end
 end
 
@@ -760,14 +804,16 @@ local function performGameOver()
 	print("<<Game Over>>")
 	hero:pause()
 	hidiDeathRun()
-	leftTouchArea:removeEventListener("touch", jump)
-	rightTouchArea:removeEventListener("touch", dash)
+	--leftTouchArea:removeEventListener("touch", jump)
+	--rightTouchArea:removeEventListener("touch", dash)
 	composer.setVariable("finalScore", math.floor(score))
 	composer.setVariable("finalMetersRun", math.floor(metersRun))
 	composer.setVariable("finalCoinsConsumed", coinsConsumed)
 	composer.setVariable("finalCashConsumed", cashConsumed)
-	timer.performWithDelay(1000, function() composer.showOverlay("scenes.gameover") end, 1) -- Experimental
+	timer.performWithDelay(1000, function() composer.showOverlay("scenes.gameover", { isModal=true }) end, 1) -- Experimental
 	--composer.showOverlay("scenes.gameover")
+	composer.setVariable("gamePaused", false)
+	isPaused = false
 	gameOverPerformed = true
 end
 
@@ -779,21 +825,6 @@ local function monitorMemory()
   	local sysMem = collectgarbage("count") * 0.001
   	local textMem = system.getInfo("textureMemoryUsed") / 1000000
 	memoryText.text = "M: " .. math.round(sysMem*10)*0.1 .. " T: " .. math.round(textMem*10)*0.1
-end
-
-local function gameLoop(event)
-	if(not gameOver) then
-		checkHeroPosition()
-		checkHeroStatus()
-		--checkEnergyStatus()
-		dt = getDeltaTime()
-
-		updateScreen()
-
-	elseif(gameOver and not gameOverPerformed) then
-		performGameOver()
-	end
-	monitorMemory()
 end
 
 ----
@@ -823,25 +854,7 @@ local function collideWithObstacle(obstacle)
 	end })
 
 	if(not isDashing) then
-		hero:toFront()
-		gameOver = true
-			timer.performWithDelay(1, function()
-			physics.pause()
-			--physics.removeBody(hero)
-			hero.x = contCX
-			hero.y = contCY
-			hero:setSequence("pop")
-			hero:play()
-			--heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
-			heroCollisionTransition = transition.to(hero, { 
-				delay=1500, 
-				time=2500, 
-				y=contH+hero.height, 
-				onComplete=function() 
-					--hero:pause()
-					composer.setVariable("allowedToQuit", true)
-				end })
-		end, 1)
+		popDeath()
 	end
 end
 
@@ -897,10 +910,118 @@ local function onCollision(event)
 	end
 end
 
+local function pauseGame()
+	isPaused = true
+	composer.setVariable("gamePaused", true)
+
+	physics.pause()
+
+	if(dashTimer) then
+		timer.pause(dashTimer)
+	end
+	if(coinTimer) then
+		timer.pause(coinTimer)
+	end
+	if(foodTimer) then
+		timer.pause(foodTimer)
+	end
+	if(cashTimer) then
+		timer.pause(cashTimer)
+	end
+	if(energyTimer) then
+		timer.pause(energyTimer)
+	end
+	if(hidiTimer) then
+		timer.pause(hidiTimer)
+	end
+
+	if(jumpTransition) then
+		transition.pause(jumpTransition)
+	end
+	if(dashTransition) then
+		transition.pause(dashTransition)
+	end
+	if(hidiTransition) then
+		transition.pause(hidiTransition)
+	end
+	if(obstacleCollisionTransition) then
+		transition.pause(obstacleCollisionTransition)
+	end
+	if(heroCollisionTransition) then
+		transition.pause(heroCollisionTransition)
+	end
+
+	--[[
+	composer.setVariable("groundTable", groundTable)
+	composer.setVariable("coinTable", coinTable)
+	composer.setVariable("obstacleTable", obstacleTable)
+	composer.setVariable("foodTable", foodTable)
+	composer.setVariable("cashTable", cashTable)
+	composer.setVariable("gameSpeed", gameSpeed)
+	composer.setVariable("mainSpeed", mainSpeed)
+	composer.setVariable("lastGroundType", lastGroundType)
+	composer.setVariable("isJumping", isJumping)
+	composer.setVariable("isDashing", isDashing)
+	composer.setVariable("gameOver", gameOver)
+	composer.setVariable("gameOverPerformed", gameOverPerformed)
+	composer.setVariable("runtime", runtime)
+	composer.setVariable("dt", dt)
+	composer.setVariable("metersRun", metersRun)
+	composer.setVariable("coinsConsumed", coinsConsumed)
+	composer.setVariable("cashConsumed", cashConsumed)
+	composer.setVariable("foodConsumed", foodConsumed)
+	composer.setVariable("energy", energy)
+	composer.setVariable("score", score)
+	composer.setVariable("velocityX", velocityX)
+	composer.setVariable("velocityY", velocityY)
+	]]
+
+	hidi:pause()
+	hero:pause()
+
+	--Runtime:removeEventListener("enterFrame", gameLoop)
+	--Runtime:removeEventListener("collision", onCollision)
+	--print(composer.getVariable("gamePaused"))
+
+	print("<<Paused game>>")
+
+	composer.showOverlay("scenes.pause", { isModal=true })
+end
+
+local function gameLoop(event)
+	--[[
+	if(isPaused) then
+		checkPauseStatus()
+	end]]
+	if(not gameOver and not isPaused) then
+		checkHeroPosition()
+		checkHeroStatus()
+
+		--dt = getDeltaTime()
+
+		if(energy > 0) then
+			removeEnergy(0.05)
+		end
+
+		updateScreen()
+
+	elseif(gameOver and not gameOverPerformed) then
+		performGameOver()
+	end
+	monitorMemory()
+	--[[
+	if(composer.getVariable("gamePaused") == false) then
+		print("FALSE")
+	else
+		print("TRUE")
+	end]]
+end
+
 local function loadEventListeners()
 	Runtime:addEventListener("enterFrame", gameLoop)
 	leftTouchArea:addEventListener("touch", jump)
 	rightTouchArea:addEventListener("touch", dash)
+	pauseButton:addEventListener("tap", pauseGame)
 	Runtime:addEventListener("collision", onCollision)
 end
 
@@ -911,13 +1032,89 @@ local function loadTimers()
 	cashTimer = timer.performWithDelay(7000, createRandomCash, 0)
 end
 
+local function resumeGame()
+--if(not composer.getVariable("gamePaused")) then
+
+	-- IMPORTANT! Any new tables added to the game needs to be added here too
+	--[[
+	groundTable = composer.getVariable("groundTable")
+	coinTable = composer.getVariable("coinTable")
+	obstacleTable = composer.getVariable("obstacleTable")
+	foodTable = composer.getVariable("foodTable")
+	cashTable = composer.getVariable("cashTable")
+	gameSpeed = composer.getVariable("gameSpeed")
+	mainSpeed = composer.getVariable("mainSpeed")
+	lastGroundType = composer.getVariable("lastGroundType")
+	isJumping = composer.getVariable("isJumping")
+	isDashing = composer.getVariable("isDashing")
+	gameOver = composer.getVariable("gameOver")
+	gameOverPerformed = composer.getVariable("gameOverPerformed")
+	runtime = composer.getVariable("runtime")
+	dt = composer.getVariable("dt")
+	metersRun = composer.getVariable("metersRun")
+	coinsConsumed = composer.getVariable("coinsConsumed")
+	cashConsumed = composer.getVariable("cashConsumed")
+	foodConsumed = composer.getVariable("foodConsumed")
+	energy = composer.getVariable("energy")
+	score = composer.getVariable("score")
+	velocityX = composer.getVariable("velocityX")
+	velocityY = composer.getVariable("velocityY")
+	]]
+
+	physics.start()
+
+	--loadEventListeners()
+
+	if(dashTimer) then
+		timer.resume(dashTimer)
+	end
+	if(coinTimer) then
+		timer.resume(coinTimer)
+	end
+	if(foodTimer) then
+		timer.resume(foodTimer)
+	end
+	if(cashTimer) then
+		timer.resume(cashTimer)
+	end
+	if(energyTimer) then
+		timer.resume(energyTimer)
+	end
+	if(hidiTimer) then
+		timer.resume(hidiTimer)
+	end
+
+	if(jumpTransition) then
+		transition.resume(jumpTransition)
+	end
+	if(dashTransition) then
+		transition.resume(dashTransition)
+	end
+	if(hidiTransition) then
+		transition.resume(hidiTransition)
+	end
+	if(obstacleCollisionTransition) then
+		transition.resume(obstacleCollisionTransition)
+	end
+	if(heroCollisionTransition) then
+		transition.resume(heroCollisionTransition)
+	end
+
+	hidi:play()
+	hero:play()
+
+	isPaused = false
+
+	print("<<Resumed game>>")
+--end
+end
+
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
 
 -- create()
 function scene:create(event)
-
 	local sceneGroup = self.view
 	-- Code here runs when the scene is first created but has not yet appeared on screen
 	--physics.pause() -- Pause physics while everything initializes
@@ -945,6 +1142,8 @@ function scene:create(event)
 
 	hero:toBack()
 	hidi:toBack()
+
+	print("<<CREATE>>")
 end
 
 -- show()
@@ -955,12 +1154,21 @@ function scene:show(event)
 
 	if (phase == "will") then
 		-- Code here runs when the scene is still off screen (but is about to come on screen)
-
+		print("<<WILL SHOW>>")
 	elseif (phase == "did") then
+		print("<<DID SHOW>>")
 		-- Code here runs when the scene is entirely on screen
-		physics.start()
-		loadTimers()
-		loadEventListeners()
+		if(not composer.getVariable("gamePaused")) then
+			physics.start()
+			loadTimers()
+			loadEventListeners()
+			print("fresh start")
+		else
+			--Runtime:addEventListener("enterFrame", gameLoop)
+			--Runtime:addEventListener("collision", onCollision)
+			resumeGame()	
+			print("resume")
+		end
 	end
 end
 
@@ -971,50 +1179,59 @@ function scene:hide(event)
 	local phase = event.phase
 
 	if (phase == "will") then
-		-- Code here runs when the scene is on screen (but is about to go off screen)
-		physics.pause()
-		Runtime:removeEventListener("collision", onCollision)
-		Runtime:removeEventListener("enterFrame", gameLoop)
+		print("<<WILL HIDE>>")
+		if(not isPaused) then
+			-- Code here runs when the scene is on screen (but is about to go off screen)
+			physics.pause()
+			Runtime:removeEventListener("collision", onCollision)
+			Runtime:removeEventListener("enterFrame", gameLoop)
 
-		if(coinTimer) then
-			timer.cancel(coinTimer)
-		end
+			if(coinTimer) then
+				timer.cancel(coinTimer)
+			end
 
-		if(foodTimer) then
-			timer.cancel(foodTimer)
-		end
+			if(foodTimer) then
+				timer.cancel(foodTimer)
+			end
 
-		if(cashTimer) then
-			timer.cancel(cashTimer)
-		end
+			if(cashTimer) then
+				timer.cancel(cashTimer)
+			end
 
-		if(energyTimer) then
-			timer.cancel(energyTimer)
-		end
+			if(energyTimer) then
+				timer.cancel(energyTimer)
+			end
 
-		if(dashTimer) then
-			timer.cancel(dashTimer)
+			if(dashTimer) then
+				timer.cancel(dashTimer)
+			end
+			dashTimer = nil
+			coinTimer = nil
+			foodTimer = nil
+			cashTimer = nil
+			energyTimer = nil
+			hidiTimer = nil
+		else
+			--Runtime:removeEventListener("enterFrame", gameLoop)
+			--Runtime:removeEventListener("collision", onCollision)
 		end
-		dashTimer = nil
-		coinTimer = nil
-		foodTimer = nil
-		cashTimer = nil
-		energyTimer = nil
-		hidiTimer = nil
 	elseif (phase == "did") then
+		print("<<DID HIDE>>")
 		-- Code here runs immediately after the scene goes entirely off screen
-		physics.stop()
-		display.remove(backGroup)
-		display.remove(groundGroup)
-		display.remove(uiGroup)
-		display.remove(mainGroup)
-		backGroup, groundGroup, uiGroup, mainGroup = nil, nil, nil, nil
+		if(not isPaused) then
+			physics.stop()
+			display.remove(backGroup)
+			display.remove(groundGroup)
+			display.remove(uiGroup)
+			display.remove(mainGroup)
+			backGroup, groundGroup, uiGroup, mainGroup = nil, nil, nil, nil
+		end
 	end
 end
 
 -- destroy()
 function scene:destroy(event)
-
+	print("<<DESTROYED>>")
 	local sceneGroup = self.view
 	-- Code here runs prior to the removal of scene's view
 

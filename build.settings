@@ -65,4 +65,18 @@ settings =
 			"android.permission.INTERNET",
 		},
 	},
+
+	plugins =
+    {
+        ["CoronaProvider.native.popup.activity"] =
+        {
+            publisherId = "com.coronalabs",
+            supportedPlatforms = { iphone=true, },
+        },
+
+        ["CoronaProvider.native.popup.social"] =
+        {
+            publisherId = "com.coronalabs"
+        },
+    },
 }
