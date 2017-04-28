@@ -19,6 +19,7 @@ local scene = composer.newScene()
 -- Requires
 ----
 local menuSheetInfo = require("scripts.menubuttons")
+local menuBgSheetInfo = require("scripts.mainmenu_images")
 local heroData = require("scripts.herodata")
 local widget = require("widget")
 
@@ -33,17 +34,24 @@ local contH = display.contentHeight
 ----
 -- Fields
 ----
-local background
-local titleText, titleImage
-local playButton, highScoreButton, settingsButton, shareButton, shopButton, howToPlayButton
+local background1, background2
+local hidi, jindol, logo, talkBubble
+local playButton, highScoreButton, settingsButton, shareButton, howToPlayButton
+local playText, tapToPlayArea
 local coins, cash
 local coinsText, cashText
 local sharedItems -- For sharing to social media/messaging
 
 ----
+-- Timers
+----
+local playTextTimer
+
+----
 -- Image sheets
 ----
 local menuButtonImageSheet
+local menuBgImageSheet
 
 ----
 -- Display groups
@@ -77,44 +85,159 @@ end
 
 local function initImageSheets()
 	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
+	menuBgImageSheet = graphics.newImageSheet("images/menu/mainmenu_images.png", menuBgSheetInfo:getSheet())
 end
 
 local function loadBackground()
-	background = display.newRect(backGroup, contCX, contCY, contW, contH)
-	background:setFillColor(1, 0.6, 0.6)
+	--background = display.newRect(backGroup, contCX, contCY, contW, contH)
+	--background:setFillColor(1, 0.6, 0.6)
+
+	background1 = display.newImageRect(backGroup, "images/menu/bg.png", 1136, 752)
+	background1.x = contCX
+	background1.y = contCY
+
+	hidi = display.newImageRect(backGroup, menuBgImageSheet, menuBgSheetInfo:getFrameIndex("hidi"), 372, 538)
+	hidi.x = contW+hidi.width
+	hidi.y = contCY-50
+
+	background2 = display.newImageRect(backGroup, "images/menu/bg_front.png", 1136, 514)
+	background2.x = contCX
+	background2.y = contCY+63
+
+	jindol = display.newImageRect(backGroup, menuBgImageSheet, menuBgSheetInfo:getFrameIndex("jindol"), 472, 484)
+	jindol.x = contW+jindol.width
+	jindol.y = contCY
+
+	logo = display.newImageRect(backGroup, menuBgImageSheet, menuBgSheetInfo:getFrameIndex("logo"), 570, 302)
+	logo.x = contW - (logo.width/2) - 10
+	logo.y = -logo.height
+	
+	talkBubble = display.newImageRect(backGroup, menuBgImageSheet, menuBgSheetInfo:getFrameIndex("talk_bubble"), 160, 119)
+	talkBubble.x = 180
+	talkBubble.y = talkBubble.height - 20
+	talkBubble.alpha = 0
 end
 
 local function loadUI()
-	titleText = display.newEmbossedText(uiGroup, "진돌 & 히디!", contCX, 50, native.systemFontBold, 72)
+	--titleText = display.newEmbossedText(uiGroup, "진돌 & 히디!", contCX, 50, native.systemFontBold, 72)
 
-	playButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_play"), 301, 151)
-	playButton.x = contCX
-	playButton.y = contH-100
+	--playButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_play"), 301, 151)
+	--playButton.x = contCX
+	--playButton.y = contH-100
 
-	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 101, 101)
+	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 92, 96)
 	shareButton.x = 60
 	shareButton.y = 60
+	shareButton.alpha = 0
 
-	settingsButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_settings"), 101, 101)
+	settingsButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_settings"), 88, 88)
 	settingsButton.x = contW-60
 	settingsButton.y = 60
+	settingsButton.alpha = 0
 
-	highScoreButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_high-score"), 251, 151)
-	highScoreButton.x = contCX+300
-	highScoreButton.y = contH-100
+	highScoreButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_highscore"), 96, 60)
+	highScoreButton.x = 60
+	highScoreButton.y = contH-40
+	highScoreButton.alpha = 0
 
-	shopButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_shop"), 251, 151)
-	shopButton.x = contCX-300
-	shopButton.y = contH-100
+	--shopButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_shop"), 251, 151)
+	--shopButton.x = contCX-300
+	--shopButton.y = contH-100
 
-	titleImage = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("34"), 338, 300)
-	titleImage.x = contCX
-	titleImage.y = contCY-50
+	--titleImage = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("34"), 338, 300)
+	--titleImage.x = contCX
+	--titleImage.y = contCY-50
 
 	coinsText = display.newEmbossedText(uiGroup, "Coins: " .. coins, 10, 140, native.systemFontBold, 36)
 	coinsText.anchorX = 0
+	coinsText.alpha = 0
 	cashText = display.newEmbossedText(uiGroup, "Cash: " .. cash, 10, 180, native.systemFontBold, 36)
 	cashText.anchorX = 0
+	cashText.alpha = 0
+
+	playText = display.newText(uiGroup, "Tap to play", contCX, contCY, native.systemFont, 72)
+	playText:setFillColor(0, 0, 0)
+	playText.alpha = 0
+
+	tapToPlayArea = display.newRect(backGroup, contCX, contCY, contW/1.3, contH/1.3)
+	tapToPlayArea.alpha = 0
+	--background:setFillColor(1, 0.6, 0.6)
+end
+
+local function startPlayTextTimer()
+	playTextTimer = timer.performWithDelay(2500, 
+		function() 
+			transition.to(playText, { 
+				time = 1250,
+				alpha=0.1,
+				onComplete=function() 
+					transition.to(playText, { time=1250, alpha = 1 })
+				end 
+				})
+		end, 0)
+end
+
+local function playButtons()
+	transition.to(playText, {
+		time = 500,
+		alpha = 1,
+		onComplete=startPlayTextTimer
+		})
+	transition.to(shareButton, {
+		time = 500,
+		alpha = 1
+		})
+	transition.to(settingsButton, {
+		time = 500,
+		alpha = 1
+		})
+	transition.to(highScoreButton, {
+		time = 500,
+		alpha = 1
+		})
+	tapToPlayArea.isHitTestable = true
+end
+
+local function playTalkBubble()
+	transition.to(talkBubble, {
+		time = 500,
+		alpha = 1,
+		onComplete = playButtons
+		})
+end
+
+local function playLogo()
+	transition.to(logo, {
+		time = 500,
+		y = contH - (logo.height/2) - 10,
+		onComplete=playTalkBubble
+	})
+end
+
+local function playHidi()
+	transition.to(hidi, {
+		time = 500,
+		x = contCX+150,
+		onComplete=playLogo
+	})
+end
+
+local function playJindol()
+	transition.to(jindol, {
+		time = 500,
+		x = contW/3,
+		--onComplete=playHidi
+	})
+
+		transition.to(hidi, {
+		time = 1000,
+		x = contCX+150,
+		onComplete=playLogo
+	})
+end
+
+local function playIntro()
+	playJindol()
 end
 
 local function displayErrorMessage(isSimulator, device)
@@ -183,12 +306,15 @@ local function gotoHighScore()
 end
 
 local function gotoSettings()
+	--timer.pause(playTextTimer)
 	composer.showOverlay("scenes.settings", { isModal=true })
 end
 
 local function loadEventListeners()
-	playButton:addEventListener("tap", gotoGame)
+	--playButton:addEventListener("tap", gotoGame)
 	highScoreButton:addEventListener("tap", gotoHighScore)
+	--playText:addEventListener("tap", gotoGame)
+	tapToPlayArea:addEventListener("tap", gotoGame)
 	settingsButton:addEventListener("tap", gotoSettings)
 	shareButton:addEventListener("tap", displayShare)
 end
@@ -212,6 +338,7 @@ function scene:create(event)
 	loadSharedItems()
 
 	loadBackground()
+	playIntro()
 	loadUI()
 end
 
@@ -226,6 +353,10 @@ function scene:show(event)
 	--if(system.getInfo("platform") ~= "ios") then
 	--	native.setProperty("androidSystemUiVisibility", "immersive")
 	--end
+		if(playTextTimer) then
+			timer.cancel(playTextTimer)
+		end
+		playTextTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
 		composer.removeScene("scenes.game", false) -- Try false if it acts weird

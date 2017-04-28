@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:65f5332d183fcb29d62657dd612bf93f:86b5223c8dd592b9bf0ae1c8cea93cd2:02ee67bb1d744d8a086f79ef6d2fcbaa$
+-- $TexturePacker:SmartUpdate:1c85738a19319810375fe5acf3a22c38:d2444507314823593b08497cb1fb38ac:02ee67bb1d744d8a086f79ef6d2fcbaa$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -15,29 +15,33 @@ SheetInfo.sheet =
     frames = {
     
         {
-            -- asparagus
-            x=272,
+            -- broccoli
+            x=646,
             y=2,
-            width=76,
+            width=266,
+            height=332,
+
+            sourceX = 0,
+            sourceY = 0,
+            sourceWidth = 265,
+            sourceHeight = 331
+        },
+        {
+            -- carrot
+            x=2,
+            y=338,
+            width=220,
             height=366,
 
             sourceX = 0,
             sourceY = 0,
-            sourceWidth = 75,
+            sourceWidth = 220,
             sourceHeight = 365
         },
         {
-            -- broccoli
-            x=2,
-            y=2,
-            width=266,
-            height=372,
-
-        },
-        {
             -- cash
-            x=646,
-            y=226,
+            x=226,
+            y=612,
             width=216,
             height=192,
 
@@ -47,25 +51,49 @@ SheetInfo.sheet =
             sourceHeight = 217
         },
         {
+            -- chicken
+            x=446,
+            y=612,
+            width=148,
+            height=200,
+
+        },
+        {
             -- coin
-            x=352,
-            y=226,
+            x=752,
+            y=542,
             width=100,
             height=100,
 
         },
         {
-            -- hamburger
-            x=352,
-            y=2,
-            width=200,
+            -- fries
+            x=734,
+            y=338,
+            width=172,
             height=200,
 
+            sourceX = 0,
+            sourceY = 0,
+            sourceWidth = 171,
+            sourceHeight = 200
+        },
+        {
+            -- hamburger
+            x=2,
+            y=708,
+            width=200,
+            height=170,
+
+            sourceX = 0,
+            sourceY = 0,
+            sourceWidth = 200,
+            sourceHeight = 169
         },
         {
             -- hole
-            x=352,
-            y=206,
+            x=620,
+            y=114,
             width=6,
             height=6,
 
@@ -76,8 +104,8 @@ SheetInfo.sheet =
         },
         {
             -- leftGround
-            x=556,
-            y=2,
+            x=2,
+            y=114,
             width=614,
             height=108,
 
@@ -89,7 +117,7 @@ SheetInfo.sheet =
         {
             -- middleGround
             x=2,
-            y=378,
+            y=2,
             width=640,
             height=108,
 
@@ -100,20 +128,16 @@ SheetInfo.sheet =
         },
         {
             -- pizza
-            x=866,
-            y=226,
+            x=598,
+            y=764,
             width=200,
-            height=188,
+            height=134,
 
-            sourceX = 0,
-            sourceY = 6,
-            sourceWidth = 200,
-            sourceHeight = 200
         },
         {
             -- rightGround
-            x=556,
-            y=114,
+            x=2,
+            y=226,
             width=614,
             height=108,
 
@@ -122,25 +146,58 @@ SheetInfo.sheet =
             sourceWidth = 640,
             sourceHeight = 107
         },
+        {
+            -- soda
+            x=598,
+            y=560,
+            width=150,
+            height=200,
+
+        },
+        {
+            -- tomato_big
+            x=226,
+            y=338,
+            width=300,
+            height=270,
+
+        },
+        {
+            -- tomato_small
+            x=530,
+            y=338,
+            width=200,
+            height=218,
+
+            sourceX = 0,
+            sourceY = 0,
+            sourceWidth = 200,
+            sourceHeight = 217
+        },
     },
     
-    sheetContentWidth = 1172,
-    sheetContentHeight = 488
+    sheetContentWidth = 914,
+    sheetContentHeight = 900
 }
 
 SheetInfo.frameIndex =
 {
 
-    ["asparagus"] = 1,
-    ["broccoli"] = 2,
+    ["broccoli"] = 1,
+    ["carrot"] = 2,
     ["cash"] = 3,
-    ["coin"] = 4,
-    ["hamburger"] = 5,
-    ["hole"] = 6,
-    ["leftGround"] = 7,
-    ["middleGround"] = 8,
-    ["pizza"] = 9,
-    ["rightGround"] = 10,
+    ["chicken"] = 4,
+    ["coin"] = 5,
+    ["fries"] = 6,
+    ["hamburger"] = 7,
+    ["hole"] = 8,
+    ["leftGround"] = 9,
+    ["middleGround"] = 10,
+    ["pizza"] = 11,
+    ["rightGround"] = 12,
+    ["soda"] = 13,
+    ["tomato_big"] = 14,
+    ["tomato_small"] = 15,
 }
 
 function SheetInfo:getSheet()

@@ -33,7 +33,7 @@ local contH = display.contentHeight
 ----
 -- Fields
 ----
-local background
+local background1, background2
 local titleText, scoreText, okText
 local highscoreFilePath
 local score, metersRun, coinsConsumed, cashConsumed
@@ -81,8 +81,15 @@ local function initImageSheets()
 end
 
 local function loadBackground()
-	background = display.newRect(backGroup, contCX, contCY, contW, contH)
-	background:setFillColor(1, 0.6, 0.6)
+	--background = display.newRect(backGroup, contCX, contCY, contW, contH)
+	--background:setFillColor(1, 0.6, 0.6)
+	background1 = display.newImageRect(backGroup, "images/menu/bg.png", 1136, 752)
+	background1.x = contCX
+	background1.y = contCY
+
+	background2 = display.newImageRect(backGroup, "images/menu/bg_front.png", 1136, 514)
+	background2.x = contCX
+	background2.y = contCY+63
 end
 
 local function loadUI()
@@ -149,6 +156,7 @@ local function loadScores()
 
 			local thisScore = display.newText(uiGroup, scoresTable[i], contCX-30, yPos, native.systemFont, 36)
 			thisScore.anchorX = 0
+			thisScore:setFillColor(0)
 		end
 	end
 end
@@ -166,7 +174,7 @@ local function gotoMenu()
 end
 
 local function loadEventListeners()
-	 background:addEventListener("tap", gotoMenu)
+	background1:addEventListener("tap", gotoMenu)
 end
 
 -- -----------------------------------------------------------------------------------

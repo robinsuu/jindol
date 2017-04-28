@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:2580a14a52e65ec61a0bb9dcdc8757e2:a9b0202bab511eae41844437b033d522:c613fe11d427795fb34012e4e22eb0dc$
+-- $TexturePacker:SmartUpdate:8e7ad07490b20b7e603f38e80469934f:c9dc3bc32e2e5edf607a63b5eb071b69:c613fe11d427795fb34012e4e22eb0dc$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -16,8 +16,8 @@ SheetInfo.sheet =
     
         {
             -- 34
-            x=2,
-            y=1226,
+            x=608,
+            y=2,
             width=338,
             height=300,
 
@@ -28,32 +28,36 @@ SheetInfo.sheet =
         },
         {
             -- button_back
-            x=344,
-            y=1226,
+            x=608,
+            y=306,
             width=202,
             height=202,
 
         },
         {
-            -- button_high-score
-            x=2,
-            y=308,
-            width=502,
-            height=302,
+            -- button_highscore
+            x=406,
+            y=408,
+            width=96,
+            height=60,
 
+            sourceX = 0,
+            sourceY = 18,
+            sourceWidth = 96,
+            sourceHeight = 96
         },
         {
             -- button_how-to-play
             x=2,
-            y=614,
+            y=512,
             width=502,
             height=302,
 
         },
         {
             -- button_ok
-            x=208,
-            y=1638,
+            x=814,
+            y=306,
             width=152,
             height=152,
 
@@ -61,7 +65,7 @@ SheetInfo.sheet =
         {
             -- button_ok_square
             x=2,
-            y=1736,
+            y=308,
             width=152,
             height=152,
 
@@ -76,40 +80,48 @@ SheetInfo.sheet =
         },
         {
             -- button_settings
-            x=344,
-            y=1432,
-            width=202,
-            height=202,
+            x=314,
+            y=408,
+            width=88,
+            height=88,
 
+            sourceX = 4,
+            sourceY = 6,
+            sourceWidth = 96,
+            sourceHeight = 96
         },
         {
             -- button_share
-            x=2,
-            y=1530,
-            width=202,
-            height=202,
+            x=314,
+            y=308,
+            width=92,
+            height=96,
 
+            sourceX = 4,
+            sourceY = 0,
+            sourceWidth = 100,
+            sourceHeight = 100
         },
         {
             -- button_shop
-            x=2,
-            y=920,
+            x=508,
+            y=512,
             width=502,
             height=302,
 
         },
         {
             -- button_x
-            x=364,
-            y=1638,
+            x=158,
+            y=308,
             width=152,
             height=152,
 
         },
     },
     
-    sheetContentWidth = 606,
-    sheetContentHeight = 1890
+    sheetContentWidth = 1012,
+    sheetContentHeight = 816
 }
 
 SheetInfo.frameIndex =
@@ -117,7 +129,7 @@ SheetInfo.frameIndex =
 
     ["34"] = 1,
     ["button_back"] = 2,
-    ["button_high-score"] = 3,
+    ["button_highscore"] = 3,
     ["button_how-to-play"] = 4,
     ["button_ok"] = 5,
     ["button_ok_square"] = 6,

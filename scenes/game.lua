@@ -302,13 +302,12 @@ local function createCash(yPos)
 	newCash.x = contW+100
 	newCash.y = yPos
 	newCash.myName = "cash"
-	physics.addBody(newCash, "static", { isSensor=true, radius=25, bounce=0 })
+	physics.addBody(newCash, "static", physicsDef:get("cash"))
 	table.insert(cashTable, newCash)
 end
 
 local function createRandomCash()
 	local randYPos = (contCY+100)-(mRand(300))
-
 	createCash(randYPos)
 end
 
@@ -320,7 +319,7 @@ local function createFood(yPos, type)
 	newFood.x = contW+100
 	newFood.y = yPos
 	newFood.myName = type
-	physics.addBody(newFood, "static", { isSensor=true, radius=25, bounce=0 })
+	physics.addBody(newFood, "static", physicsDef:get(type))
 	table.insert(foodTable, newFood)
 end
 
@@ -332,6 +331,12 @@ local function createRandomFood()
 		createFood(randYPos, "pizza")
 	elseif(randNum == 2) then
 		createFood(randYPos, "hamburger")
+	elseif(randNum == 3) then
+		createFood(randYPos, "fries")
+	elseif(randNum == 4) then
+		createFood(randYPos, "soda")
+	elseif(randNum == 5) then
+		createFood(randYPos, "chicken")
 	end
 end
 
@@ -341,7 +346,7 @@ local function createCoin(xPos, yPos)
 	newCoin.x = xPos + contW+100
 	newCoin.y = yPos
 	newCoin.myName = "coin"
-	physics.addBody(newCoin, "static", { isSensor=true, radius=25, bounce=0 })
+	physics.addBody(newCoin, "static", physicsDef:get("coin"))
 	table.insert(coinTable, newCoin)
 end
 
@@ -368,7 +373,7 @@ local function createObstacle(obstacleType, xPos)
 	local properties = getObjectProperties(index)
 	local newObstacle = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
 	newObstacle.x = xPos
-	newObstacle.y = contH-(properties.height-35)
+	newObstacle.y = contH-(newObstacle.height/2 + 64) -- Default: contH-(newObstacle.height/2 + 64) -- 64 is the default height of the ground
 	newObstacle.myName = obstacleType
 
 	physics.addBody(newObstacle, "static", physicsDef:get(obstacleType))
@@ -378,16 +383,19 @@ local function createObstacle(obstacleType, xPos)
 end
 
 local function createRandomObstacle(xPos)
-	local randNum = mRand(3)
+	local randNum = mRand(4)
+	--randNum = 3
 	if(randNum == 1) then
 		createObstacle("broccoli", xPos)
 	elseif(randNum == 2) then
-		createObstacle("asparagus", xPos)
+		createObstacle("carrot", xPos)
 	elseif(randNum == 3) then
-		createObstacle("asparagus", xPos-200)
-		createObstacle("asparagus", xPos-100)
-		createObstacle("asparagus", xPos)
-		createObstacle("asparagus", xPos+100)
+		createObstacle("tomato_small", xPos-300)
+		createObstacle("tomato_small", xPos-150)
+		createObstacle("tomato_small", xPos)
+		createObstacle("tomato_small", xPos+150)
+	elseif(randNum == 4) then
+		createObstacle("tomato_big", xPos)
 	end
 end
 
@@ -848,7 +856,7 @@ local function didCollide(obj1, obj2, name1, name2)
 end
 
 local function collideWithObstacle(obstacle)
-	obstacleCollisionTransition = transition.to(obstacle, { time=200, x=-100, y=-100, rotation=-360, 
+	obstacleCollisionTransition = transition.to(obstacle, { time=300, x=-obstacle.width-100, y=-obstacle.height-100, rotation=-360, 
 		onComplete=function() 
 		display.remove(obstacle)
 	end })
@@ -896,10 +904,10 @@ local function onCollision(event)
 			end
 		end
 
-		if(didCollide(obj1, obj2, "hero", "asparagus") or didCollide(obj1, obj2, "hero", "broccoli")) then
+		if(didCollide(obj1, obj2, "hero", "carrot") or didCollide(obj1, obj2, "hero", "broccoli") or didCollide(obj1, obj2, "hero", "tomato_small") or didCollide(obj1, obj2, "hero", "tomato_big")) then
 			local obstacle = nil
 
-			if(obj1.myName == "asparagus" or obj1.myName == "broccoli") then
+			if(obj1.myName == "carrot" or obj1.myName == "broccoli" or obj1.myName == "tomato_small" or obj1.myName == "tomato_big") then
 					obstacle = obj1
 				else
 					obstacle = obj2
