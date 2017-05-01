@@ -63,6 +63,8 @@ local foodConsumed, foodText -- To be implemented
 local score, scoreText
 local velocityX, velocityY -- Keeps track of hero speed
 local pauseButton, isPaused -- isPaused determines whether the entire game is paused or not
+local magnetActive
+local scoreMultiplier
 
 ----
 -- Image sheets
@@ -84,11 +86,13 @@ local coinTable -- Holds the coins displayed in the world
 local obstacleTable -- Holds the obstacles displayed in the world
 local foodTable -- Holds the food displayed in the world
 local cashTable -- Holds the cash displayed in the world
+local powerupTable -- Holds the power ups displayed in the world
 
 ----
 -- Timers
 ----
-local coinTimer, dashTimer, foodTimer, cashTimer, energyTimer, hidiTimer
+local coinTimer, dashTimer, foodTimer, cashTimer
+local energyTimer, hidiTimer, powerupTimer, magnetTimer, multiplierTimer
 
 ----
 -- Display groups
@@ -120,6 +124,7 @@ local function initVariables()
 	obstacleTable = {}
 	foodTable = {}
 	cashTable = {}
+	powerupTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	mainSpeed = 12 -- Default: 10 (the speed of interactable objects)
@@ -142,8 +147,13 @@ local function initVariables()
 	foodTimer = nil
 	cashTimer = nil
 	energyTimer = nil
+	powerupTimer = nil
+	magnetTimer = nil
+	multiplierTimer = nil
 	hidiTimer = nil
 	isPaused = false
+	magnetActive = false
+	scoreMultiplier = 1
 	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
 end
 
@@ -294,6 +304,31 @@ local function loadUI()
 	pauseButton.y = 25
 end
 
+local function createPowerup(yPos, type)
+	local index = getObjectIndex(type)
+	local properties = getObjectProperties(index)
+	local newPowerup = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
+
+	newPowerup.x = contW+100
+	newPowerup.y = yPos
+	newPowerup.myName = type
+	physics.addBody(newPowerup, "static", physicsDef:get(type))
+	table.insert(powerupTable, newPowerup)
+end
+
+local function createRandomPowerup()
+	local randYPos = (contCY+100)-(mRand(300))
+	local randNum = mRand(2)
+	local powerupType = "magnet"
+
+	if(randNum == 1) then
+		powerupType = "magnet"
+	else
+		powerupType = "2xmultiplier"
+	end
+	createPowerup(randYPos, powerupType)
+end
+
 local function createCash(yPos)
 	local index = getObjectIndex("cash")
 	local properties = getObjectProperties(index)
@@ -324,7 +359,7 @@ local function createFood(yPos, type)
 end
 
 local function createRandomFood()
-	local randNum = mRand(2)
+	local randNum = mRand(5)
 	local randYPos = (contCY+100)-(mRand(300))
 
 	if(randNum == 1) then
@@ -445,6 +480,24 @@ local function loadGround()
 	end
 end
 
+-- Attracts a coin with the magnet power up
+local function attractCoin(coin)
+	if(not coin.consumed) then
+		coin.x = (coin.x or 0) - (mainSpeed * gameSpeed) * 3
+
+		if(coin.y > hero.y) then
+			coin.y = coin.y - 5
+		else
+			coin.y = coin.y + 5
+		end
+
+		if(coin.x <= hero.x) then
+			coin.x = hero.x + 10
+			coin.y = hero.y
+		end
+	end
+end
+
 ----
 -- Update on new frame functions
 ----
@@ -469,6 +522,18 @@ local function updateObstacles()
 			-- Why no display.remove(obstable) ???
 			display.remove(obstacle)
 			table.remove(obstacleTable, i)
+		end
+	end
+end
+
+local function updatePowerups()
+	for i=#powerupTable, 1, -1 do	
+		local powerup = powerupTable[i]
+		powerup.x = (powerup.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If powerup.x is false it will use 0 as a fallback value (cash.x will be false after cash has been consumed)
+
+		if(powerup.x <= -100) then
+			display.remove(powerup)
+			table.remove(powerupTable, i)
 		end
 	end
 end
@@ -500,7 +565,12 @@ end
 local function updateCoins()
 	for i=#coinTable, 1, -1 do	
 		local coin = coinTable[i]
-		coin.x = (coin.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
+
+		if(not magnetActive) then
+			coin.x = (coin.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If coin.x is false it will use 0 as a fallback value (coin.x will be false after a coin has been consumed)
+		else
+			attractCoin(coin)
+		end
 
 		if(coin.x <= -100) then
 			display.remove(coin)
@@ -564,9 +634,10 @@ end
 
 local function updateScore()
 	metersRun = metersRun + (0.05 * gameSpeed)-- * dt -- Meter updates depending on game speed
+	score = score + (0.05 * gameSpeed * scoreMultiplier)
 	meterText.text = math.floor(metersRun) .. " meters"
 
-	score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))
+	--score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))-- * (scoreMultiplier) -- This does not work for obvious reasons. I need to find a way to incrementally increase score multiplied by 2
 	scoreText.text = "Score: " .. math.floor(score)
 end
 
@@ -575,6 +646,7 @@ local function updateScreen()
 	updateCoins()
 	updateFood()
 	updateCash()
+	updatePowerups()
 	updateObstacles()
 	updateBackground()
 	updateForeground()
@@ -737,6 +809,26 @@ local function dash(event)
 	end
 end
 
+local function consumePowerup(powerup)
+	if(not gameOver) then
+		transition.to(powerup, { time=250, x=-100, y=-powerup.height})
+
+		if(not powerup.consumed) then
+			-- Add logic for different power ups here
+			if(powerup.myName == "2xmultiplier") then
+				scoreMultiplier = 2
+				multiplierTimer = timer.performWithDelay(10000, function() scoreMultiplier = 1 end, 0)
+			end
+
+			if(powerup.myName == "magnet") then
+				magnetActive = true
+				magnetTimer = timer.performWithDelay(15000, function() magnetActive = false end, 0)
+			end
+			powerup.consumed = true
+		end
+	end
+end
+
 local function consumeFood(food)
 	if(not gameOver) then
 		transition.to(food, { time=250, x=-100, y=-food.height})
@@ -744,6 +836,7 @@ local function consumeFood(food)
 		if(not food.consumed) then
 			addEnergy(20)
 			foodConsumed = foodConsumed + 1
+			score = score + (5 * scoreMultiplier)
 			food.consumed = true
 		end
 	end
@@ -756,6 +849,7 @@ local function consumeCoin(coin)
 		if(not coin.consumed) then
 			coinsConsumed = coinsConsumed + 1
 			coinsText.text = coinsConsumed
+			score = score + (1 * scoreMultiplier)
 			coin.consumed = true
 		end
 	end
@@ -768,6 +862,7 @@ local function consumeCash(cash)
 		if(not cash.consumed) then
 			cashConsumed = cashConsumed + 1
 			cashText.text = cashConsumed
+			score = score + (10 * scoreMultiplier)
 			cash.consumed = true
 		end
 	end
@@ -893,11 +988,22 @@ local function onCollision(event)
 			else
 				consumeCash(obj2)
 			end
-			
 		end
 
-		if(didCollide(obj1, obj2, "hero", "pizza") or didCollide(obj1, obj2, "hero", "hamburger")) then
-			if(obj1.myName == "pizza" or obj1.myName == "hamburger") then
+		if(didCollide(obj1, obj2, "hero", "magnet") or didCollide(obj1, obj2, "hero", "2xmultiplier")) then
+			if(obj1.myName == "magnet" or obj1.myName == "2xmultiplier") then
+				consumePowerup(obj1)
+			else
+				consumePowerup(obj2)
+			end
+		end
+
+		if(didCollide(obj1, obj2, "hero", "pizza") 
+		or didCollide(obj1, obj2, "hero", "hamburger")
+		or didCollide(obj1, obj2, "hero", "soda")
+		or didCollide(obj1, obj2, "hero", "fries")
+		or didCollide(obj1, obj2, "hero", "chicken")) then
+			if(obj1.myName == "pizza" or obj1.myName == "hamburger" or obj1.myName == "soda" or obj1.myName == "fries" or obj1.myName == "chicken") then
 				consumeFood(obj1)
 			else
 				consumeFood(obj2)
@@ -936,11 +1042,22 @@ local function pauseGame()
 	if(cashTimer) then
 		timer.pause(cashTimer)
 	end
+	if(powerupTimer) then
+		timer.pause(powerupTimer)
+	end
 	if(energyTimer) then
 		timer.pause(energyTimer)
 	end
 	if(hidiTimer) then
 		timer.pause(hidiTimer)
+	end
+
+	if(multiplierTimer) then
+		timer.pause(multiplierTimer)
+	end
+
+	if(magnetTimer) then
+		timer.pause(magnetTimer)
 	end
 
 	if(jumpTransition) then
@@ -1036,8 +1153,9 @@ end
 -- Important: Omit the () after timer callback functions or it will malfunction
 local function loadTimers()
 	coinTimer = timer.performWithDelay(5000, createRandomCoinPattern, 0)
-	foodTimer = timer.performWithDelay(5000, createRandomFood, 0)
-	cashTimer = timer.performWithDelay(7000, createRandomCash, 0)
+	foodTimer = timer.performWithDelay(4000, createRandomFood, 0)
+	cashTimer = timer.performWithDelay(110000, createRandomCash, 0)
+	powerupTimer = timer.performWithDelay(18000, createRandomPowerup, 0)
 end
 
 local function resumeGame()
@@ -1085,11 +1203,22 @@ local function resumeGame()
 	if(cashTimer) then
 		timer.resume(cashTimer)
 	end
+	if(powerupTimer) then
+		timer.resume(powerupTimer)
+	end
 	if(energyTimer) then
 		timer.resume(energyTimer)
 	end
 	if(hidiTimer) then
 		timer.resume(hidiTimer)
+	end
+
+	if(multiplierTimer) then
+		timer.resume(multiplierTimer)
+	end
+
+	if(magnetTimer) then
+		timer.pause(magnetTimer)
 	end
 
 	if(jumpTransition) then
@@ -1206,8 +1335,20 @@ function scene:hide(event)
 				timer.cancel(cashTimer)
 			end
 
+			if(powerupTimer) then
+				timer.cancel(powerupTimer)
+			end
+
 			if(energyTimer) then
 				timer.cancel(energyTimer)
+			end
+
+			if(multiplierTimer) then
+				timer.cancel(multiplierTimer)
+			end
+
+			if(magnetTimer) then
+				timer.cancel(magnetTimer)
 			end
 
 			if(dashTimer) then
@@ -1217,6 +1358,9 @@ function scene:hide(event)
 			coinTimer = nil
 			foodTimer = nil
 			cashTimer = nil
+			powerupTimer = nil
+			magnetTimer = nil
+			multiplierTimer = nil
 			energyTimer = nil
 			hidiTimer = nil
 		else

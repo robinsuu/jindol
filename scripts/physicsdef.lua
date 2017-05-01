@@ -365,6 +365,60 @@ function M.physicsData(scale)
                     
 		}
 		
+		, 
+		["magnet"] = {
+                    
+                    
+                    
+                    
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    shape = {   104, -40  ,  65, 57.5  ,  14, 102  ,  12, 18.5  ,  47, -61  }
+                    }
+                     ,
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    shape = {   -41, 100  ,  -75, 79  ,  -15, 28.5  ,  12, 18.5  ,  14, 102  }
+                    }
+                     ,
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    shape = {   -36.5, 8  ,  -75, 79  ,  -63, -104.5  ,  -62, -104.5  ,  -7, -82  }
+                    }
+                     ,
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    shape = {   -104, 23  ,  -101.5, -8  ,  -63, -104.5  ,  -75, 79  ,  -97.5, 52  }
+                    }
+                     ,
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    shape = {   -75, 79  ,  -36.5, 8  ,  -15, 28.5  }
+                    }
+                    
+                    
+                    
+		}
+		
+		, 
+		["2xmultiplier"] = {
+                    
+                    
+                    
+                    {
+                    pe_fixture_id = "", density = 2, friction = 0, bounce = 0, isSensor=true, 
+                    filter = { categoryBits = 1, maskBits = 65535, groupIndex = 0 },
+                    radius = 67.007
+                    }
+                    
+                    
+		}
+		
 	} }
 
         -- apply scale factor

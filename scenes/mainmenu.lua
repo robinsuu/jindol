@@ -353,13 +353,10 @@ function scene:show(event)
 	--if(system.getInfo("platform") ~= "ios") then
 	--	native.setProperty("androidSystemUiVisibility", "immersive")
 	--end
-		if(playTextTimer) then
-			timer.cancel(playTextTimer)
-		end
-		playTextTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
-		composer.removeScene("scenes.game", false) -- Try false if it acts weird
+		--composer.removeScene("scenes.settings", false)
+		--composer.removeScene("scenes.game", false) -- Try false if it acts weird
 		loadEventListeners()
 	end
 end
@@ -372,7 +369,10 @@ function scene:hide(event)
 
 	if (phase == "will") then
 		-- Code here runs when the scene is on screen (but is about to go off screen)
-
+		if(playTextTimer) then
+			timer.cancel(playTextTimer)
+		end
+		playTextTimer = nil
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
 

@@ -66,7 +66,8 @@ local function loadUI()
 end
 
 local function gotoMainMenu()
-	composer.gotoScene("scenes.mainmenu")
+	composer.hideOverlay()
+	--composer.gotoScene("scenes.mainmenu")
 end
 
 local function loadEventListeners()
