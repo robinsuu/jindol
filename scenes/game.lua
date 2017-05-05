@@ -65,6 +65,7 @@ local velocityX, velocityY -- Keeps track of hero speed
 local pauseButton, isPaused -- isPaused determines whether the entire game is paused or not
 local magnetActive
 local scoreMultiplier
+local magnetImage, multiplierImage -- For displaying power ups while active
 
 ----
 -- Image sheets
@@ -91,7 +92,7 @@ local powerupTable -- Holds the power ups displayed in the world
 ----
 -- Timers
 ----
-local coinTimer, dashTimer, foodTimer, cashTimer
+local coinTimer, dashTimer, foodTimer, cashTimer, speedTimer -- speedTimer is for incrementally increasing the speed of the game
 local energyTimer, hidiTimer, powerupTimer, magnetTimer, multiplierTimer
 
 ----
@@ -150,6 +151,7 @@ local function initVariables()
 	powerupTimer = nil
 	magnetTimer = nil
 	multiplierTimer = nil
+	speedTimer = nil
 	hidiTimer = nil
 	isPaused = false
 	magnetActive = false
@@ -302,6 +304,18 @@ local function loadUI()
 	pauseButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 50, 50)
 	pauseButton.x = contW-300
 	pauseButton.y = 25
+
+	multiplierImage = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("2xmultiplier"), 33, 34)
+	multiplierImage.x = contCX
+	multiplierImage.y = 110
+	multiplierImage.anchorX = 0.5 -- Aligned middle
+	multiplierImage.alpha = 0
+
+	magnetImage = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("magnet"), 52, 52)
+	magnetImage.x = contCX
+	magnetImage.y = 110
+	magnetImage.anchorX = 0.5 -- Aligned middle
+	magnetImage.alpha = 0
 end
 
 local function createPowerup(yPos, type)
@@ -376,7 +390,6 @@ local function createRandomFood()
 end
 
 local function createCoin(xPos, yPos)
-	--local newCoin = display.newImageRect(mainGroup, "images/items/coin.png", 50, 50)
 	local newCoin = display.newImageRect(mainGroup, objectImageSheet, objectSheetInfo:getFrameIndex("coin"), 50, 50)
 	newCoin.x = xPos + contW+100
 	newCoin.y = yPos
@@ -391,6 +404,8 @@ local function createRandomCoinPattern()
 
 	if(randNum == 9) then
 		newPattern = "jindol"
+	elseif(randNum == 7 or randNum == 8) then
+		newPattern = "zigzag"
 	elseif(randNum > 1)	then
 		newPattern = "straightTen"
 	end
@@ -419,7 +434,6 @@ end
 
 local function createRandomObstacle(xPos)
 	local randNum = mRand(4)
-	--randNum = 3
 	if(randNum == 1) then
 		createObstacle("broccoli", xPos)
 	elseif(randNum == 2) then
@@ -636,8 +650,6 @@ local function updateScore()
 	metersRun = metersRun + (0.05 * gameSpeed)-- * dt -- Meter updates depending on game speed
 	score = score + (0.05 * gameSpeed * scoreMultiplier)
 	meterText.text = math.floor(metersRun) .. " meters"
-
-	--score = (metersRun) + ((foodConsumed * 5) + (coinsConsumed * 2) + (cashConsumed * 10))-- * (scoreMultiplier) -- This does not work for obvious reasons. I need to find a way to incrementally increase score multiplied by 2
 	scoreText.text = "Score: " .. math.floor(score)
 end
 
@@ -683,34 +695,21 @@ local function popDeath()
 	gameOver = true
 		timer.performWithDelay(1, function()
 		physics.pause()
-		--physics.removeBody(hero)
 		hero.x = contCX
 		hero.y = contCY
 		hero:setSequence("pop")
 		hero:play()
-		--heroCollisionTransition = transition.to(hero, { time=100, rotation=-90, onComplete=function() hero.x = 300 hero:pause() end })
 		heroCollisionTransition = transition.to(hero, { 
 			delay=1500, 
 			time=2500, 
 			y=contH+hero.height, 
 			onComplete=function() 
-				--hero:pause()
 				composer.setVariable("allowedToQuit", true)
 			end })
 	end, 1)
 end
 
 local function checkEnergyStatus()
-
-	--[[
-	if(energy <= 33) then
-		energyMeter:setFillColor(1, 0.2, 0)
-	elseif(energy > 33 and energy < 66) then
-		energyMeter:setFillColor(1, 1, 0)
-	else
-		energyMeter:setFillColor(0, 0.8, 0)
-	end--]]
-
 	local energyGradient = {
 		type = "gradient",
 		color1 = { 1, 0.8, 1 }, -- 1, 0.8, 0
@@ -814,15 +813,16 @@ local function consumePowerup(powerup)
 		transition.to(powerup, { time=250, x=-100, y=-powerup.height})
 
 		if(not powerup.consumed) then
-			-- Add logic for different power ups here
 			if(powerup.myName == "2xmultiplier") then
 				scoreMultiplier = 2
-				multiplierTimer = timer.performWithDelay(10000, function() scoreMultiplier = 1 end, 0)
+				multiplierImage.alpha = 1
+				multiplierTimer = timer.performWithDelay(10000, function() scoreMultiplier = 1 multiplierImage.alpha = 0 end, 1)
 			end
 
 			if(powerup.myName == "magnet") then
 				magnetActive = true
-				magnetTimer = timer.performWithDelay(15000, function() magnetActive = false end, 0)
+				magnetImage.alpha = 1
+				magnetTimer = timer.performWithDelay(15000, function() magnetActive = false magnetImage.alpha = 0 end, 1)
 			end
 			powerup.consumed = true
 		end
@@ -862,7 +862,7 @@ local function consumeCash(cash)
 		if(not cash.consumed) then
 			cashConsumed = cashConsumed + 1
 			cashText.text = cashConsumed
-			score = score + (10 * scoreMultiplier)
+			score = score + (30 * scoreMultiplier)
 			cash.consumed = true
 		end
 	end
@@ -873,6 +873,11 @@ local function hidiDeathRun()
 	hidi:setSequence("fastRun")
 	hidi:play()
 	transition.to(hidi, { time=1500, x=contW+hidi.width})
+end
+
+local function increaseMainSpeed()
+	mainSpeed = mainSpeed + (mainSpeed * 0.1)
+	print("Game speed is now: " .. mainSpeed)
 end
 
 local function checkHeroStatus()
@@ -907,8 +912,6 @@ local function performGameOver()
 	print("<<Game Over>>")
 	hero:pause()
 	hidiDeathRun()
-	--leftTouchArea:removeEventListener("touch", jump)
-	--rightTouchArea:removeEventListener("touch", dash)
 	composer.setVariable("finalScore", math.floor(score))
 	composer.setVariable("finalMetersRun", math.floor(metersRun))
 	composer.setVariable("finalCoinsConsumed", coinsConsumed)
@@ -1042,6 +1045,9 @@ local function pauseGame()
 	if(cashTimer) then
 		timer.pause(cashTimer)
 	end
+	if(speedTimer) then
+		timer.pause(speedTimer)
+	end
 	if(powerupTimer) then
 		timer.pause(powerupTimer)
 	end
@@ -1076,37 +1082,8 @@ local function pauseGame()
 		transition.pause(heroCollisionTransition)
 	end
 
-	--[[
-	composer.setVariable("groundTable", groundTable)
-	composer.setVariable("coinTable", coinTable)
-	composer.setVariable("obstacleTable", obstacleTable)
-	composer.setVariable("foodTable", foodTable)
-	composer.setVariable("cashTable", cashTable)
-	composer.setVariable("gameSpeed", gameSpeed)
-	composer.setVariable("mainSpeed", mainSpeed)
-	composer.setVariable("lastGroundType", lastGroundType)
-	composer.setVariable("isJumping", isJumping)
-	composer.setVariable("isDashing", isDashing)
-	composer.setVariable("gameOver", gameOver)
-	composer.setVariable("gameOverPerformed", gameOverPerformed)
-	composer.setVariable("runtime", runtime)
-	composer.setVariable("dt", dt)
-	composer.setVariable("metersRun", metersRun)
-	composer.setVariable("coinsConsumed", coinsConsumed)
-	composer.setVariable("cashConsumed", cashConsumed)
-	composer.setVariable("foodConsumed", foodConsumed)
-	composer.setVariable("energy", energy)
-	composer.setVariable("score", score)
-	composer.setVariable("velocityX", velocityX)
-	composer.setVariable("velocityY", velocityY)
-	]]
-
 	hidi:pause()
 	hero:pause()
-
-	--Runtime:removeEventListener("enterFrame", gameLoop)
-	--Runtime:removeEventListener("collision", onCollision)
-	--print(composer.getVariable("gamePaused"))
 
 	print("<<Paused game>>")
 
@@ -1114,10 +1091,6 @@ local function pauseGame()
 end
 
 local function gameLoop(event)
-	--[[
-	if(isPaused) then
-		checkPauseStatus()
-	end]]
 	if(not gameOver and not isPaused) then
 		checkHeroPosition()
 		checkHeroStatus()
@@ -1134,12 +1107,6 @@ local function gameLoop(event)
 		performGameOver()
 	end
 	monitorMemory()
-	--[[
-	if(composer.getVariable("gamePaused") == false) then
-		print("FALSE")
-	else
-		print("TRUE")
-	end]]
 end
 
 local function loadEventListeners()
@@ -1154,39 +1121,12 @@ end
 local function loadTimers()
 	coinTimer = timer.performWithDelay(5000, createRandomCoinPattern, 0)
 	foodTimer = timer.performWithDelay(4000, createRandomFood, 0)
-	cashTimer = timer.performWithDelay(110000, createRandomCash, 0)
+	cashTimer = timer.performWithDelay(31000, createRandomCash, 0)
+	speedTimer = timer.performWithDelay(30000, increaseMainSpeed, 0)
 	powerupTimer = timer.performWithDelay(18000, createRandomPowerup, 0)
 end
 
 local function resumeGame()
---if(not composer.getVariable("gamePaused")) then
-
-	-- IMPORTANT! Any new tables added to the game needs to be added here too
-	--[[
-	groundTable = composer.getVariable("groundTable")
-	coinTable = composer.getVariable("coinTable")
-	obstacleTable = composer.getVariable("obstacleTable")
-	foodTable = composer.getVariable("foodTable")
-	cashTable = composer.getVariable("cashTable")
-	gameSpeed = composer.getVariable("gameSpeed")
-	mainSpeed = composer.getVariable("mainSpeed")
-	lastGroundType = composer.getVariable("lastGroundType")
-	isJumping = composer.getVariable("isJumping")
-	isDashing = composer.getVariable("isDashing")
-	gameOver = composer.getVariable("gameOver")
-	gameOverPerformed = composer.getVariable("gameOverPerformed")
-	runtime = composer.getVariable("runtime")
-	dt = composer.getVariable("dt")
-	metersRun = composer.getVariable("metersRun")
-	coinsConsumed = composer.getVariable("coinsConsumed")
-	cashConsumed = composer.getVariable("cashConsumed")
-	foodConsumed = composer.getVariable("foodConsumed")
-	energy = composer.getVariable("energy")
-	score = composer.getVariable("score")
-	velocityX = composer.getVariable("velocityX")
-	velocityY = composer.getVariable("velocityY")
-	]]
-
 	physics.start()
 
 	--loadEventListeners()
@@ -1202,6 +1142,9 @@ local function resumeGame()
 	end
 	if(cashTimer) then
 		timer.resume(cashTimer)
+	end
+	if(speedTimer) then
+		timer.resume(speedTimer)
 	end
 	if(powerupTimer) then
 		timer.resume(powerupTimer)
@@ -1335,6 +1278,10 @@ function scene:hide(event)
 				timer.cancel(cashTimer)
 			end
 
+			if(speedTimer) then
+				timer.cancel(speedTimer)
+			end
+
 			if(powerupTimer) then
 				timer.cancel(powerupTimer)
 			end
@@ -1358,6 +1305,7 @@ function scene:hide(event)
 			coinTimer = nil
 			foodTimer = nil
 			cashTimer = nil
+			speedTimer = nil
 			powerupTimer = nil
 			magnetTimer = nil
 			multiplierTimer = nil

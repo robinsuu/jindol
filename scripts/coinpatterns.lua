@@ -23,15 +23,39 @@ local coinTable = {}
 coinTable = {
 	straightTen = {
 		{ x=baseX*0, y=baseY+50 }, -- 1
-		{ x=baseX*1, y=baseY+50 },-- 2
+		{ x=baseX*1, y=baseY+100 },-- 2
 		{ x=baseX*2, y=baseY+50 }, -- 3
-		{ x=baseX*3, y=baseY+50 },-- 4
+		{ x=baseX*3, y=baseY+100 },-- 4
 		{ x=baseX*4, y=baseY+50 }, -- 5
-		{ x=baseX*5, y=baseY+50 },-- 6
+		{ x=baseX*5, y=baseY+100 },-- 6
 		{ x=baseX*6, y=baseY+50 },-- 7
-		{ x=baseX*7, y=baseY+50 },-- 8
+		{ x=baseX*7, y=baseY+100 },-- 8
 		{ x=baseX*8, y=baseY+50 },-- 9
-		{ x=baseX*9, y=baseY+50 }-- 10
+		{ x=baseX*9, y=baseY+100 }-- 10
+	},
+	zigzag = {
+		{ x=baseX*0, y=baseY },
+		{ x=baseX*1, y=baseY+50 },
+		{ x=baseX*2, y=baseY+100 },
+		{ x=baseX*3, y=baseY+150 },
+		{ x=baseX*4, y=baseY+100 },
+		{ x=baseX*5, y=baseY+50 },
+		{ x=baseX*6, y=baseY },
+		{ x=baseX*7, y=baseY+50 },
+		{ x=baseX*8, y=baseY+100 },
+		{ x=baseX*9, y=baseY+150 },
+		{ x=baseX*10, y=baseY+100 },
+		{ x=baseX*11, y=baseY+50 },
+		{ x=baseX*12, y=baseY },
+		{ x=baseX*13, y=baseY+50 },
+		{ x=baseX*14, y=baseY+100 },
+		{ x=baseX*15, y=baseY+150 },
+		{ x=baseX*16, y=baseY+100 },
+		{ x=baseX*17, y=baseY+50 },
+		{ x=baseX*18, y=baseY },
+		{ x=baseX*19, y=baseY+50 },
+		{ x=baseX*20, y=baseY+100 },
+		{ x=baseX*21, y=baseY+150 },
 	},
 	jindol = {
 		-- J
