@@ -144,9 +144,9 @@ local function initVariables()
 	dt = getDeltaTime()
 	metersRun = 0
 	coinsConsumed = 0
-	cashConsumed = 0
+	cashConsumed = 0 -- Default 0
 	foodConsumed = 0
-	energy = 100 -- Default 0
+	energy = 100
 	score = 0
 	velocityX = 0
 	velocityY = 0
@@ -1242,6 +1242,8 @@ local function continueGame()
 	if(magnetTimer) then
 		timer.pause(magnetTimer)
 	end
+
+	cashConsumed = composer.getVariable("finalCashConsumed") -- Make sure that cash has the right value after continue
 
 	hero.x = 300 -- Default: 300
 	hero.y = contH-157 -- Default: contH-157

@@ -363,9 +363,9 @@ function scene:show(event)
 	--if(system.getInfo("platform") ~= "ios") then
 	--	native.setProperty("androidSystemUiVisibility", "immersive")
 	--end
-		composer.setVariable("continuePerformed", false) -- Reset continue when you go to the main menu
-		composer.setVariable("continueGame", false)
-		composer.setVariable("okToCleanup", false)
+		composer.setVariable("continuePerformed", false) -- Whether a continue has been performed or not
+		composer.setVariable("continueGame", false) -- Flag for telling the game.lua that a continue has been triggered
+		composer.setVariable("okToCleanup", false) -- Whether the game should be flushed after game over or not
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
 		--composer.removeScene("scenes.settings", false)

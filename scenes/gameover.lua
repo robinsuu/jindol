@@ -18,6 +18,13 @@ local scene = composer.newScene()
 -- Requires
 ----
 local game = require("scenes.game")
+local heroData = require("scripts.herodata")
+local objectSheetInfo = require("scripts.objects")
+
+----
+-- Image sheets
+----
+local objectImageSheet
 
 ----
 -- Forward declarations
@@ -31,8 +38,10 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local tapToRestartText, continueText
+local tapToRestartText, continueText, cashText
 local okToContinue
+local cash, newCash
+local cashIcon, cashContinue, adContinue, quitGame
 
 ----
 -- Display groups
@@ -51,22 +60,66 @@ local function initVariables()
 	okToContinue = false
 end
 
-local function loadBackground()
-	background = display.newRect(uiGroup, contCX, contCY, contW, contH)
-	background.alpha = 0
-	--background:setFillColor(0.5, 0.5, 0.5)
-	background.isHitTestable = true
+local function initImageSheets()
+	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
 end
 
-local function loadText()
-	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to continue", contCX, (display.contentHeight/2)-200, native.systemFont, 72)
-	continueText = display.newEmbossedText(uiGroup, "Try again? Tap here!", contCX, (display.contentHeight/2), native.systemFont, 72)
+local function loadCash()
+	newCash = composer.getVariable("finalCashConsumed")
+	cash = heroData:getCash()
+end
+
+local function loadBackground()
+	--background = display.newRect(uiGroup, contCX, contCY, contW, contH)
+	--background.alpha = 0
+	--background:setFillColor(0.5, 0.5, 0.5)
+	--background = display.newRect(uiGroup, contCX, contCY, contW/1.5, contH/1.5)
+	--background:setFillColor(0.5, 0.8, 1)
+	--background.isHitTestable = true
+end
+
+local function loadUI()
+	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to quit!", contCX, (display.contentHeight/2)-100, native.systemFont, 72)
+	continueText = display.newEmbossedText(uiGroup, "Try again? Tap here!", contCX, (display.contentHeight/2)+100, native.systemFont, 72)
+	tapToRestartText:setFillColor(0)
+	continueText:setFillColor(0)
+
+	cashIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 80, 70)
+	cashIcon.x = contCX-100
+	cashIcon.y = (display.contentHeight/2)-200
+	cashIcon.anchorX = 0
+
+	cashText = display.newEmbossedText(uiGroup, (cash + newCash), contCX, (display.contentHeight/2)-200, native.systemFont, 50)
+	cashText.anchorX = 0
+	cashText:setFillColor(0)
+end
+
+-- Check whether the player has more than 5 cash, then subtract it
+local function checkCash()
+	if((newCash + cash >= 5)) then
+		for i=0, 4, 1 do
+			if(newCash > 0) then -- First use the cash that's been collected during this game session
+				newCash = newCash - 1
+			else -- Otherwise, use the stored cash
+				cash = cash - 1
+			end
+		end
+		composer.setVariable("finalCashConsumed", newCash) -- Update the global with the new value after subtraction
+		composer.setVariable("cashToSave", cash)
+		heroData:saveCash() -- Update the cash saved to file
+		composer.setVariable("cashToSave", 0) -- Reset the global
+		okToContinue = true -- Allow the player to continue playing after paying the cash
+	end
 end
 
 local function continueGame()
-	okToContinue = true
+	--okToContinue = true
 
-	if(okToContinue and not composer.getVariable("continuePerformed") and composer.getVariable("allowedToQuit")) then
+	if(not composer.getVariable("continuePerformed")) then
+		checkCash()
+	end
+
+	if(okToContinue and composer.getVariable("allowedToQuit")) then
 		composer.setVariable("continueGame", true)
 		composer.setVariable("continuePerformed", true)
 		--composer.hideOverlay()
@@ -101,8 +154,12 @@ function scene:create(event)
 	initDisplayGroups()
 	sceneGroup:insert(uiGroup)
 
-	loadBackground()
-	loadText()
+	initVariables()
+	initImageSheets()
+
+	loadCash()
+	--loadBackground()
+	loadUI()
 end
 
 -- show()

@@ -19,7 +19,17 @@ local M = {}
 local heroFilePath = system.pathForFile("hero.json", system.DocumentsDirectory)
 local heroTable = {}
 
--- Not used
+local function performSave()
+	local file = io.open(heroFilePath, "w")
+
+	if(file) then
+		file:write(json.encode(heroTable))
+		io.close(file)
+	end
+
+	print(">>> Hero saved to file")
+end
+
 function M:clearGlobals()
 	composer.setVariable("finalScore", 0)
 	composer.setVariable("finalMetersRun", 0)
@@ -42,6 +52,25 @@ function M:loadHeroFromFile()
 	end
 
 	print(">>> Hero loaded from file")
+end
+
+function M:getCash()
+	M:loadHeroFromFile()
+
+	return heroTable.cash
+end
+
+function M:saveCash()
+	local newCashValue = composer.getVariable("cashToSave")
+
+	heroTable.cash = newCashValue
+	performSave()
+end
+
+function M:getCoins()
+	M:loadHeroFromFile()
+
+	return heroTable.coins
 end
 
 function M:saveHeroToFile()
@@ -90,14 +119,7 @@ function M:saveHeroToFile()
 	composer.setVariable("totalCoinsConsumed", heroTable.coins)
 	composer.setVariable("totalCashConsumed", heroTable.cash)
 
-	local file = io.open(heroFilePath, "w")
-
-	if(file) then
-		file:write(json.encode(heroTable))
-		io.close(file)
-	end
-
-	print(">>> Hero saved to file")
+	performSave()
 end
 
 return M
