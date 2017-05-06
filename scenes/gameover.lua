@@ -15,6 +15,11 @@ local scene = composer.newScene()
 -- -----------------------------------------------------------------------------------
 
 ----
+-- Requires
+----
+local game = require("scenes.game")
+
+----
 -- Forward declarations
 ----
 local contCX = display.contentCenterX
@@ -26,7 +31,8 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local tapToRestartText
+local tapToRestartText, continueText
+local okToContinue
 
 ----
 -- Display groups
@@ -41,6 +47,10 @@ local function initDisplayGroups()
 	uiGroup = display.newGroup()
 end
 
+local function initVariables()
+	okToContinue = false
+end
+
 local function loadBackground()
 	background = display.newRect(uiGroup, contCX, contCY, contW, contH)
 	background.alpha = 0
@@ -50,6 +60,19 @@ end
 
 local function loadText()
 	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to continue", contCX, (display.contentHeight/2)-200, native.systemFont, 72)
+	continueText = display.newEmbossedText(uiGroup, "Try again? Tap here!", contCX, (display.contentHeight/2), native.systemFont, 72)
+end
+
+local function continueGame()
+	okToContinue = true
+
+	if(okToContinue and not composer.getVariable("continuePerformed") and composer.getVariable("allowedToQuit")) then
+		composer.setVariable("continueGame", true)
+		composer.setVariable("continuePerformed", true)
+		--composer.hideOverlay()
+		--game.continueGame()
+		composer.gotoScene("scenes.game")
+	end
 end
 
 local function gotoHighScores()
@@ -61,7 +84,8 @@ local function gotoHighScores()
 end
 
 local function loadEventListeners()
-	background:addEventListener("tap", gotoHighScores)
+	tapToRestartText:addEventListener("tap", gotoHighScores)
+	continueText:addEventListener("tap", continueGame)
 end
 
 -- -----------------------------------------------------------------------------------

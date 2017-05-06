@@ -33,6 +33,8 @@ local contH = display.contentHeight
 local background
 local backButton
 local settingsText
+local audioText, bgmText
+local audioSetting, bgmSetting
 
 ----
 -- Display groups
@@ -57,12 +59,59 @@ local function loadBackground()
 	background:setFillColor(0.5, 0.8, 1)
 end
 
+local function checkSettings()
+	if(composer.getVariable("soundActive")) then
+		display.remove(audioSetting)
+		audioSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxchecked"), 56, 56)
+	else
+		display.remove(audioSetting)
+		audioSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxempty"), 56, 56)
+	end
+
+	audioSetting.x = contCX
+	audioSetting.y = (display.contentHeight/2)
+
+	if(composer.getVariable("bgmActive")) then
+		display.remove(bgmSetting)
+		bgmSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxchecked"), 56, 56)
+	else
+		display.remove(bgmSetting)
+		bgmSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxempty"), 56, 56)
+	end
+
+	bgmSetting.x = contCX
+	bgmSetting.y = (display.contentHeight/2)+70
+end
+
 local function loadUI()
 	settingsText = display.newEmbossedText(uiGroup, "Settings", contCX, (display.contentHeight/2)-170, native.systemFont, 60)
 	
 	backButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 101, 101)
 	backButton.x = contCX+370
 	backButton.y = contH-530
+
+	audioText = display.newEmbossedText(uiGroup, "Audio: ", contCX-100, (display.contentHeight/2), native.systemFont, 40)
+	bgmText = display.newEmbossedText(uiGroup, "BGM: ", contCX-100, (display.contentHeight/2)+70, native.systemFont, 40)
+
+	checkSettings()
+end
+
+local function toggleBgm()
+	if(composer.getVariable("bgmActive")) then
+		composer.setVariable("bgmActive", false)
+	else
+		composer.setVariable("bgmActive", true)
+	end
+	checkSettings()
+end
+
+local function toggleAudio()
+	if(composer.getVariable("soundActive")) then
+		composer.setVariable("soundActive", false)
+	else
+		composer.setVariable("soundActive", true)
+	end
+	checkSettings()
 end
 
 local function gotoMainMenu()
@@ -72,6 +121,8 @@ end
 
 local function loadEventListeners()
 	backButton:addEventListener("tap", gotoMainMenu)
+	bgmText:addEventListener("tap", toggleBgm)
+	audioText:addEventListener("tap", toggleAudio)
 end
 
 -- -----------------------------------------------------------------------------------

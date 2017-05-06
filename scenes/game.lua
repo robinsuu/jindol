@@ -20,6 +20,7 @@ local objectSheetInfo = require("scripts.objects")
 local heroSheetInfo = require("scripts.hero")
 local hidiSheetInfo = require("scripts.hidi")
 local menuSheetInfo = require("scripts.menubuttons")
+local sfx = require("scripts.sfx")
 
 ----
 -- Physics
@@ -66,6 +67,7 @@ local pauseButton, isPaused -- isPaused determines whether the entire game is pa
 local magnetActive
 local scoreMultiplier
 local magnetImage, multiplierImage -- For displaying power ups while active
+local soundActive, bgmActive
 
 ----
 -- Image sheets
@@ -118,6 +120,11 @@ local function getDeltaTime()
     return deltaTime
 end
 
+local function initSoundVariables()
+	soundActive = composer.getVariable("soundActive")
+	bgmActive = composer.getVariable("bgmActive")
+end
+
 local function initVariables()
 	groundTable = {}
 	groundBuffer = 10
@@ -155,8 +162,12 @@ local function initVariables()
 	hidiTimer = nil
 	isPaused = false
 	magnetActive = false
+	soundActive = false
+	bgmActive = false
 	scoreMultiplier = 1
 	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
+
+	initSoundVariables()
 end
 
 local function initImageSheets()
@@ -316,6 +327,12 @@ local function loadUI()
 	magnetImage.y = 110
 	magnetImage.anchorX = 0.5 -- Aligned middle
 	magnetImage.alpha = 0
+end
+
+local function playBgm()
+	if(composer.getVariable("bgmActive")) then
+		--audio.play(sfx.gameMusic, { loops=-1, channel=1 })
+	end
 end
 
 local function createPowerup(yPos, type)
@@ -750,6 +767,10 @@ local function performJump()
 		hero:play()
 	end
 	
+	if(soundActive) then
+		audio.play(sfx.jumpSound)
+	end
+
 	jumpTransition = transition.to(hero, { time=400, y=hero.y-350, transition=easing.outQuart })
 end
 
@@ -834,6 +855,9 @@ local function consumeFood(food)
 		transition.to(food, { time=250, x=-100, y=-food.height})
 
 		if(not food.consumed) then
+			if(soundActive) then
+				--audio.play(sfx.foodSound)
+			end
 			addEnergy(20)
 			foodConsumed = foodConsumed + 1
 			score = score + (5 * scoreMultiplier)
@@ -847,6 +871,9 @@ local function consumeCoin(coin)
 		transition.to(coin, { time=250, x=-100, y=-coin.height})
 
 		if(not coin.consumed) then
+			if(soundActive) then
+				audio.play(sfx.coinSound)
+			end
 			coinsConsumed = coinsConsumed + 1
 			coinsText.text = coinsConsumed
 			score = score + (1 * scoreMultiplier)
@@ -909,6 +936,65 @@ local function checkHeroPosition()
 end
 
 local function performGameOver()
+	--------------------Experimental----------------------------
+	physics.pause()
+
+	if(dashTimer) then
+		timer.cancel(dashTimer)
+	end
+	if(coinTimer) then
+		timer.pause(coinTimer)
+	end
+	if(foodTimer) then
+		timer.pause(foodTimer)
+	end
+	if(cashTimer) then
+		timer.pause(cashTimer)
+	end
+	if(speedTimer) then
+		timer.pause(speedTimer)
+	end
+	if(powerupTimer) then
+		timer.pause(powerupTimer)
+	end
+	if(energyTimer) then
+		timer.pause(energyTimer)
+	end
+	if(hidiTimer) then
+		timer.cancel(hidiTimer)
+	end
+
+	if(multiplierTimer) then
+		timer.cancel(multiplierTimer)
+	end
+
+	if(magnetTimer) then
+		timer.cancel(magnetTimer)
+	end
+
+	if(jumpTransition) then
+		transition.cancel(jumpTransition)
+	end
+	if(dashTransition) then
+		transition.cancel(dashTransition)
+	end
+	if(hidiTransition) then
+		transition.cancel(hidiTransition)
+	end
+	if(obstacleCollisionTransition) then
+		transition.cancel(obstacleCollisionTransition)
+	end
+	if(heroCollisionTransition) then
+		transition.cancel(heroCollisionTransition)
+	end
+
+	--hidi:pause()
+	--hero:pause()
+
+	--Runtime:removeEventListener("collision", onCollision)
+
+	-------------------
+
 	print("<<Game Over>>")
 	hero:pause()
 	hidiDeathRun()
@@ -1126,6 +1212,55 @@ local function loadTimers()
 	powerupTimer = timer.performWithDelay(18000, createRandomPowerup, 0)
 end
 
+-- Continue/retry game after death
+local function continueGame()
+	physics.start()
+
+	--loadEventListeners()
+
+	if(coinTimer) then
+		timer.resume(coinTimer)
+	end
+	if(foodTimer) then
+		timer.resume(foodTimer)
+	end
+	if(cashTimer) then
+		timer.resume(cashTimer)
+	end
+	if(speedTimer) then
+		timer.resume(speedTimer)
+	end
+	if(powerupTimer) then
+		timer.resume(powerupTimer)
+	end
+	if(energyTimer) then
+		timer.resume(energyTimer)
+	end
+	if(multiplierTimer) then
+		timer.resume(multiplierTimer)
+	end
+	if(magnetTimer) then
+		timer.pause(magnetTimer)
+	end
+
+	hero.x = 300 -- Default: 300
+	hero.y = contH-157 -- Default: contH-157
+	hero:setSequence("normalRun")
+	hero:play()
+
+	hidi.x = 50
+	hidi.y = contH-330
+	hidi:setSequence("normalRun")
+	hidi:play()
+
+	--isPaused = false
+	gameOverPerformed = false
+	gameOver = false
+	composer.setVariable("okToCleanup", true)
+	print("<<Continued game>>")
+end
+
+-- Resume game after pause
 local function resumeGame()
 	physics.start()
 
@@ -1238,16 +1373,20 @@ function scene:show(event)
 	elseif (phase == "did") then
 		print("<<DID SHOW>>")
 		-- Code here runs when the scene is entirely on screen
-		if(not composer.getVariable("gamePaused")) then
+		if(not composer.getVariable("gamePaused") and not composer.getVariable("continueGame")) then
 			physics.start()
 			loadTimers()
 			loadEventListeners()
-			print("fresh start")
-		else
+			playBgm()
+			print("Fresh start!")
+		elseif(composer.getVariable("gamePaused")) then -- If it bugs out change this to a normal else
 			--Runtime:addEventListener("enterFrame", gameLoop)
 			--Runtime:addEventListener("collision", onCollision)
 			resumeGame()	
-			print("resume")
+			print("Resume after pause!")
+		elseif(composer.getVariable("continueGame")) then
+			print("Retry game!")
+			continueGame()
 		end
 	end
 end
@@ -1260,11 +1399,15 @@ function scene:hide(event)
 
 	if (phase == "will") then
 		print("<<WILL HIDE>>")
-		if(not isPaused) then
+		if(not isPaused and composer.getVariable("okToCleanup")) then
 			-- Code here runs when the scene is on screen (but is about to go off screen)
 			physics.pause()
 			Runtime:removeEventListener("collision", onCollision)
 			Runtime:removeEventListener("enterFrame", gameLoop)
+
+			audio.rewind()
+			audio.stop()
+			--audio.dispose(sfx.gameMusic)
 
 			if(coinTimer) then
 				timer.cancel(coinTimer)
@@ -1311,6 +1454,7 @@ function scene:hide(event)
 			multiplierTimer = nil
 			energyTimer = nil
 			hidiTimer = nil
+			print("Canceled and cleaned up timers")
 		else
 			--Runtime:removeEventListener("enterFrame", gameLoop)
 			--Runtime:removeEventListener("collision", onCollision)
@@ -1318,13 +1462,14 @@ function scene:hide(event)
 	elseif (phase == "did") then
 		print("<<DID HIDE>>")
 		-- Code here runs immediately after the scene goes entirely off screen
-		if(not isPaused) then
+		if(not isPaused and composer.getVariable("okToCleanup")) then
 			physics.stop()
 			display.remove(backGroup)
 			display.remove(groundGroup)
 			display.remove(uiGroup)
 			display.remove(mainGroup)
 			backGroup, groundGroup, uiGroup, mainGroup = nil, nil, nil, nil
+			print("Removed all display elements")
 		end
 	end
 end

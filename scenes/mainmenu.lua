@@ -22,6 +22,7 @@ local menuSheetInfo = require("scripts.menubuttons")
 local menuBgSheetInfo = require("scripts.mainmenu_images")
 local heroData = require("scripts.herodata")
 local widget = require("widget")
+local sfx = require("scripts.sfx")
 
 ----
 -- Forward declarations
@@ -150,10 +151,10 @@ local function loadUI()
 
 	coinsText = display.newEmbossedText(uiGroup, "Coins: " .. coins, 10, 140, native.systemFontBold, 36)
 	coinsText.anchorX = 0
-	coinsText.alpha = 0
+	--coinsText.alpha = 0
 	cashText = display.newEmbossedText(uiGroup, "Cash: " .. cash, 10, 180, native.systemFontBold, 36)
 	cashText.anchorX = 0
-	cashText.alpha = 0
+	--cashText.alpha = 0
 
 	playText = display.newText(uiGroup, "Tap to play", contCX, contCY, native.systemFont, 72)
 	playText:setFillColor(0, 0, 0)
@@ -162,6 +163,14 @@ local function loadUI()
 	tapToPlayArea = display.newRect(backGroup, contCX, contCY, contW/1.3, contH/1.3)
 	tapToPlayArea.alpha = 0
 	--background:setFillColor(1, 0.6, 0.6)
+end
+
+local function playBgm()
+	if(composer.getVariable("bgmActive")) then
+		audio.reserveChannels(1)
+		audio.setVolume(0.5, { channel=1 })
+		--audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
+	end
 end
 
 local function startPlayTextTimer()
@@ -340,6 +349,7 @@ function scene:create(event)
 	loadBackground()
 	playIntro()
 	loadUI()
+	playBgm()
 end
 
 -- show()
@@ -353,6 +363,9 @@ function scene:show(event)
 	--if(system.getInfo("platform") ~= "ios") then
 	--	native.setProperty("androidSystemUiVisibility", "immersive")
 	--end
+		composer.setVariable("continuePerformed", false) -- Reset continue when you go to the main menu
+		composer.setVariable("continueGame", false)
+		composer.setVariable("okToCleanup", false)
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
 		--composer.removeScene("scenes.settings", false)
@@ -373,6 +386,10 @@ function scene:hide(event)
 			timer.cancel(playTextTimer)
 		end
 		playTextTimer = nil
+
+		audio.rewind()
+		audio.stop()
+		--audio.dispose(sfx.mainMenuMusic)
 	elseif (phase == "did") then
 		-- Code here runs immediately after the scene goes entirely off screen
 

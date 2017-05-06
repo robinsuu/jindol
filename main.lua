@@ -43,6 +43,11 @@ local function initGlobals()
 	composer.setVariable("totalCoinsConsumed", 0)
 	composer.setVariable("totalCashConsumed", 0)
 	composer.setVariable("gamePaused", false)
+	composer.setVariable("bgmActive", true)
+	composer.setVariable("soundActive", true)
+	composer.setVariable("continuePerformed", false) -- Whether a continue has been performed or not
+	composer.setVariable("continueGame", false) -- Flag for telling the game.lua that a continue has been triggered
+	composer.setVariable("okToCleanup", false) -- Whether the game should be flushed after game over or not
 end
 
 initGlobals()
