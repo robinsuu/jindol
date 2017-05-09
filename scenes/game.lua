@@ -955,10 +955,10 @@ local function performGameOver()
 		timer.pause(speedTimer)
 	end
 	if(powerupTimer) then
-		timer.pause(powerupTimer)
+		timer.cancel(powerupTimer)
 	end
 	if(energyTimer) then
-		timer.pause(energyTimer)
+		timer.cancel(energyTimer)
 	end
 	if(hidiTimer) then
 		timer.cancel(hidiTimer)
@@ -1230,12 +1230,10 @@ local function continueGame()
 	if(speedTimer) then
 		timer.resume(speedTimer)
 	end
+	--[[ The below may want to be re-added
 	if(powerupTimer) then
 		timer.resume(powerupTimer)
-	end
-	if(energyTimer) then
-		timer.resume(energyTimer)
-	end
+	end]]
 	if(multiplierTimer) then
 		timer.resume(multiplierTimer)
 	end

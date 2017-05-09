@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:e115f82771c3329eb7b71ae88fc96335:dccb4dbb73d690c468b2de5c62073dda:c613fe11d427795fb34012e4e22eb0dc$
+-- $TexturePacker:SmartUpdate:981b2d1022f4dbbbdff68bef545f9d92:af126ae86b1a2a6f13bfc4427117a82a:c613fe11d427795fb34012e4e22eb0dc$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -16,8 +16,8 @@ SheetInfo.sheet =
     
         {
             -- 34
-            x=608,
-            y=2,
+            x=518,
+            y=474,
             width=338,
             height=300,
 
@@ -29,15 +29,15 @@ SheetInfo.sheet =
         {
             -- button_back
             x=2,
-            y=614,
+            y=1006,
             width=202,
             height=202,
 
         },
         {
             -- button_highscore
-            x=676,
-            y=730,
+            x=208,
+            y=1006,
             width=96,
             height=60,
 
@@ -49,23 +49,23 @@ SheetInfo.sheet =
         {
             -- button_how-to-play
             x=2,
-            y=308,
+            y=700,
             width=502,
             height=302,
 
         },
         {
             -- button_ok
-            x=208,
-            y=614,
+            x=860,
+            y=474,
             width=152,
             height=152,
 
         },
         {
             -- button_ok_square
-            x=364,
-            y=614,
+            x=860,
+            y=630,
             width=152,
             height=152,
 
@@ -80,8 +80,8 @@ SheetInfo.sheet =
         },
         {
             -- button_settings
-            x=908,
-            y=714,
+            x=692,
+            y=1092,
             width=88,
             height=88,
 
@@ -92,8 +92,8 @@ SheetInfo.sheet =
         },
         {
             -- button_share
-            x=908,
-            y=614,
+            x=596,
+            y=1092,
             width=92,
             height=96,
 
@@ -105,23 +105,35 @@ SheetInfo.sheet =
         {
             -- button_shop
             x=508,
-            y=308,
+            y=786,
             width=502,
             height=302,
 
         },
         {
             -- button_x
-            x=520,
-            y=614,
+            x=324,
+            y=1006,
             width=152,
             height=152,
 
         },
         {
+            -- cancel
+            x=608,
+            y=2,
+            width=364,
+            height=468,
+
+            sourceX = 78,
+            sourceY = 30,
+            sourceWidth = 512,
+            sourceHeight = 512
+        },
+        {
             -- checkboxchecked
-            x=676,
-            y=614,
+            x=208,
+            y=1092,
             width=112,
             height=112,
 
@@ -132,8 +144,8 @@ SheetInfo.sheet =
         },
         {
             -- checkboxempty
-            x=792,
-            y=614,
+            x=480,
+            y=1092,
             width=112,
             height=112,
 
@@ -142,10 +154,22 @@ SheetInfo.sheet =
             sourceWidth = 127,
             sourceHeight = 127
         },
+        {
+            -- film
+            x=2,
+            y=308,
+            width=512,
+            height=388,
+
+            sourceX = 0,
+            sourceY = 62,
+            sourceWidth = 512,
+            sourceHeight = 512
+        },
     },
     
-    sheetContentWidth = 1012,
-    sheetContentHeight = 818
+    sheetContentWidth = 1014,
+    sheetContentHeight = 1210
 }
 
 SheetInfo.frameIndex =
@@ -162,8 +186,10 @@ SheetInfo.frameIndex =
     ["button_share"] = 9,
     ["button_shop"] = 10,
     ["button_x"] = 11,
-    ["checkboxchecked"] = 12,
-    ["checkboxempty"] = 13,
+    ["cancel"] = 12,
+    ["checkboxchecked"] = 13,
+    ["checkboxempty"] = 14,
+    ["film"] = 15,
 }
 
 function SheetInfo:getSheet()

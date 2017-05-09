@@ -32,6 +32,10 @@ settings =
 			UIPrerenderedIcon = true, -- set to false for "shine" overlay
 			--UIApplicationExitsOnSuspend = true, -- uncomment to quit app on suspend
 
+			-- The below two lines are for appodeal
+			MinimumOSVersion = "8.0",
+            NSAppTransportSecurity = { NSAllowsArbitraryLoads=true },
+
 			CFBundleIconFiles =
 			{
 				"Icon.png",
@@ -77,6 +81,12 @@ settings =
         ["CoronaProvider.native.popup.social"] =
         {
             publisherId = "com.coronalabs"
+        },
+
+        ["plugin.appodeal"] =
+        {
+            publisherId = "com.coronalabs",
+            supportedPlatforms = { iphone=true, android=true, ["android-kindle"]=true, appletvos=true }
         },
     },
 }

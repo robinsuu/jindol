@@ -20,11 +20,13 @@ local scene = composer.newScene()
 local game = require("scenes.game")
 local heroData = require("scripts.herodata")
 local objectSheetInfo = require("scripts.objects")
+local menuSheetInfo = require("scripts.menubuttons")
+local appodeal = require("plugin.appodeal")
 
 ----
 -- Image sheets
 ----
-local objectImageSheet
+local objectImageSheet, menuButtonImageSheet
 
 ----
 -- Forward declarations
@@ -38,10 +40,10 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local tapToRestartText, continueText, cashText
+local cashText, cashIcon, cashContinueIcon, adContinueIcon, cancelIcon
 local okToContinue
 local cash, newCash
-local cashIcon, cashContinue, adContinue, quitGame
+local adStarted
 
 ----
 -- Display groups
@@ -58,15 +60,21 @@ end
 
 local function initVariables()
 	okToContinue = false
+	adStarted = false
 end
 
 local function initImageSheets()
 	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
+	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
 end
 
 local function loadCash()
 	newCash = composer.getVariable("finalCashConsumed")
 	cash = heroData:getCash()
+
+	if(cash == nil) then
+		cash = 0
+	end
 end
 
 local function loadBackground()
@@ -79,10 +87,17 @@ local function loadBackground()
 end
 
 local function loadUI()
-	tapToRestartText = display.newEmbossedText(uiGroup, "Game Over! Tap to quit!", contCX, (display.contentHeight/2)-100, native.systemFont, 72)
-	continueText = display.newEmbossedText(uiGroup, "Try again? Tap here!", contCX, (display.contentHeight/2)+100, native.systemFont, 72)
-	tapToRestartText:setFillColor(0)
-	continueText:setFillColor(0)
+	cashContinueIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 240, 210)
+	cashContinueIcon.x = contCX-250
+	cashContinueIcon.y = (display.contentHeight/2)
+
+	adContinueIcon = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("film"), 256, 194)
+	adContinueIcon.x = contCX
+	adContinueIcon.y = (display.contentHeight/2)
+
+	cancelIcon = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("cancel"), 182, 234)
+	cancelIcon.x = contCX+250
+	cancelIcon.y = (display.contentHeight/2)
 
 	cashIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 80, 70)
 	cashIcon.x = contCX-100
@@ -95,36 +110,37 @@ local function loadUI()
 end
 
 -- Check whether the player has more than 5 cash, then subtract it
-local function checkCash()
-	if((newCash + cash >= 5)) then
-		for i=0, 4, 1 do
-			if(newCash > 0) then -- First use the cash that's been collected during this game session
-				newCash = newCash - 1
-			else -- Otherwise, use the stored cash
-				cash = cash - 1
+local function payCash()
+	if(cash ~= nil) then
+		if((newCash + cash >= 5)) then
+			for i=0, 4, 1 do
+				if(newCash > 0) then -- First use the cash that's been collected during this game session
+					newCash = newCash - 1
+				else -- Otherwise, use the stored cash
+					cash = cash - 1
+				end
 			end
+			composer.setVariable("finalCashConsumed", newCash) -- Update the global with the new value after subtraction
+			composer.setVariable("cashToSave", cash)
+			heroData:saveCash() -- Update the cash saved to file
+			composer.setVariable("cashToSave", 0) -- Reset the global
+			okToContinue = true -- Allow the player to continue playing after paying the cash
 		end
-		composer.setVariable("finalCashConsumed", newCash) -- Update the global with the new value after subtraction
-		composer.setVariable("cashToSave", cash)
-		heroData:saveCash() -- Update the cash saved to file
-		composer.setVariable("cashToSave", 0) -- Reset the global
-		okToContinue = true -- Allow the player to continue playing after paying the cash
 	end
 end
 
 local function continueGame()
-	--okToContinue = true
-
-	if(not composer.getVariable("continuePerformed")) then
-		checkCash()
-	end
-
 	if(okToContinue and composer.getVariable("allowedToQuit")) then
 		composer.setVariable("continueGame", true)
 		composer.setVariable("continuePerformed", true)
-		--composer.hideOverlay()
-		--game.continueGame()
 		composer.gotoScene("scenes.game")
+	end
+end
+
+local function checkCash()
+	if(not composer.getVariable("continuePerformed")) then
+		payCash()
+		continueGame()
 	end
 end
 
@@ -136,11 +152,51 @@ local function gotoHighScores()
 	end
 end
 
-local function loadEventListeners()
-	tapToRestartText:addEventListener("tap", gotoHighScores)
-	continueText:addEventListener("tap", continueGame)
+----
+-- Ads
+----
+local function adListener(event)
+	if(event.phase == "init") then -- Successful initiation
+		--appodeal.show("rewardedVideo")
+	elseif(event.phase == "failed") then -- The ad failed to load
+		print(event.type)
+		print(event.isError)
+		print(event.response)
+	elseif(event.phase == "loaded") then
+		--appodeal.show("rewardedVideo")
+	end
+
+	if(event.phase == "playbackEnded") then
+		print("Video watched! Paying out reward..")
+		okToContinue = true
+	end
+
+	if(event.phase == "closed" and okToContinue) then
+		continueGame()
+	end
 end
 
+function playAd()
+	if(not composer.getVariable("continuePerformed") and not adStarted) then
+		adStarted = true
+		appodeal.show("rewardedVideo")
+	end
+end
+
+local function initAds()
+	appodeal.init(adListener, {
+		appKey = "8e6e6c5acd1bddc48895968b56fb4b8c5cc359542697e6b0",
+		locationTracking = false,
+		supportedAdTypes = {"rewardedVideo"},
+		testMode = true
+	})
+end
+
+local function loadEventListeners()
+	cancelIcon:addEventListener("tap", gotoHighScores)
+	cashContinueIcon:addEventListener("tap", checkCash)
+	adContinueIcon:addEventListener("tap", playAd)
+end
 -- -----------------------------------------------------------------------------------
 -- Scene event functions
 -- -----------------------------------------------------------------------------------
@@ -158,8 +214,11 @@ function scene:create(event)
 	initImageSheets()
 
 	loadCash()
-	--loadBackground()
 	loadUI()
+
+	if(not composer.getVariable("continuePerformed")) then
+		initAds()
+	end
 end
 
 -- show()
