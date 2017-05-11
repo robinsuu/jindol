@@ -148,7 +148,7 @@ local function initVariables()
 	dt = getDeltaTime()
 	metersRun = 0
 	coinsConsumed = 0
-	cashConsumed = 0 -- Default 0
+	cashConsumed = 100 -- Default 0
 	foodConsumed = 0
 	energy = 100
 	score = 0
@@ -325,7 +325,7 @@ local function loadUI()
 	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, "BRLNSR.TTF", 30)
 	cashText.anchorX = 0 -- Aligned left
 
-	energyMeter = display.newRect(uiGroup, contCX, 65, (energy * 3), 25)
+	energyMeter = display.newRect(scoreBannerGroup, contCX, 65, (energy * 3), 25)
 	energyMeter:setFillColor(1, 0.8, 1)
 	energyMeter.anchorX = 0.5
 
@@ -953,6 +953,11 @@ local function checkHeroPosition()
 			isJumping = false
 		end
 	end
+
+	-- If the hero is invulnerable he shouldn't be able to fall down a hole
+	if(invulnerable and hero.y > contH+hero.height/2) then
+		hero.y = contH-200
+	end
 end
 
 local function performGameOver()
@@ -1276,6 +1281,7 @@ local function continueGame()
 	gameOver = false
 	composer.setVariable("okToCleanup", true)
 
+	addEnergy(100)
 	invulnerable = true
 	hero.alpha = 0.5
 	timer.performWithDelay(5000, function() hero.alpha = 1 invulnerable = false end, 1)
