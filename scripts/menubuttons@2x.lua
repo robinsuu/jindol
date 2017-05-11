@@ -1,7 +1,7 @@
 --
 -- created with TexturePacker (http://www.codeandweb.com/texturepacker)
 --
--- $TexturePacker:SmartUpdate:981b2d1022f4dbbbdff68bef545f9d92:af126ae86b1a2a6f13bfc4427117a82a:c613fe11d427795fb34012e4e22eb0dc$
+-- $TexturePacker:SmartUpdate:2aec4c786ac723051263004c500ade0f:13d45d548394608c10fdeb0a68b125f7:c613fe11d427795fb34012e4e22eb0dc$
 --
 -- local sheetInfo = require("mysheet")
 -- local myImageSheet = graphics.newImageSheet( "mysheet.png", sheetInfo:getSheet() )
@@ -16,8 +16,8 @@ SheetInfo.sheet =
     
         {
             -- 34
-            x=518,
-            y=474,
+            x=1004,
+            y=508,
             width=338,
             height=300,
 
@@ -27,17 +27,9 @@ SheetInfo.sheet =
             sourceHeight = 320
         },
         {
-            -- button_back
-            x=2,
-            y=1006,
-            width=202,
-            height=202,
-
-        },
-        {
             -- button_highscore
-            x=208,
-            y=1006,
+            x=370,
+            y=1104,
             width=96,
             height=60,
 
@@ -47,41 +39,9 @@ SheetInfo.sheet =
             sourceHeight = 96
         },
         {
-            -- button_how-to-play
-            x=2,
-            y=700,
-            width=502,
-            height=302,
-
-        },
-        {
-            -- button_ok
-            x=860,
-            y=474,
-            width=152,
-            height=152,
-
-        },
-        {
-            -- button_ok_square
-            x=860,
-            y=630,
-            width=152,
-            height=152,
-
-        },
-        {
-            -- button_play
-            x=2,
-            y=2,
-            width=602,
-            height=302,
-
-        },
-        {
             -- button_settings
-            x=692,
-            y=1092,
+            x=1088,
+            y=994,
             width=88,
             height=88,
 
@@ -92,8 +52,8 @@ SheetInfo.sheet =
         },
         {
             -- button_share
-            x=596,
-            y=1092,
+            x=886,
+            y=712,
             width=92,
             height=96,
 
@@ -103,25 +63,17 @@ SheetInfo.sheet =
             sourceHeight = 100
         },
         {
-            -- button_shop
-            x=508,
-            y=786,
-            width=502,
-            height=302,
-
-        },
-        {
             -- button_x
-            x=324,
-            y=1006,
+            x=1546,
+            y=656,
             width=152,
             height=152,
 
         },
         {
             -- cancel
-            x=608,
-            y=2,
+            x=2,
+            y=712,
             width=364,
             height=468,
 
@@ -132,8 +84,8 @@ SheetInfo.sheet =
         },
         {
             -- checkboxchecked
-            x=208,
-            y=1092,
+            x=1718,
+            y=2,
             width=112,
             height=112,
 
@@ -144,8 +96,8 @@ SheetInfo.sheet =
         },
         {
             -- checkboxempty
-            x=480,
-            y=1092,
+            x=1346,
+            y=690,
             width=112,
             height=112,
 
@@ -155,9 +107,17 @@ SheetInfo.sheet =
             sourceHeight = 127
         },
         {
+            -- dash
+            x=1546,
+            y=508,
+            width=198,
+            height=144,
+
+        },
+        {
             -- film
-            x=2,
-            y=308,
+            x=370,
+            y=712,
             width=512,
             height=388,
 
@@ -166,30 +126,86 @@ SheetInfo.sheet =
             sourceWidth = 512,
             sourceHeight = 512
         },
+        {
+            -- jump
+            x=886,
+            y=994,
+            width=198,
+            height=144,
+
+        },
+        {
+            -- pause
+            x=1004,
+            y=2,
+            width=710,
+            height=502,
+
+            sourceX = 4,
+            sourceY = 2,
+            sourceWidth = 716,
+            sourceHeight = 509
+        },
+        {
+            -- pause_button
+            x=1346,
+            y=508,
+            width=196,
+            height=178,
+
+            sourceX = 6,
+            sourceY = 0,
+            sourceWidth = 202,
+            sourceHeight = 177
+        },
+        {
+            -- score
+            x=2,
+            y=2,
+            width=998,
+            height=706,
+
+            sourceX = 4,
+            sourceY = 2,
+            sourceWidth = 1006,
+            sourceHeight = 715
+        },
+        {
+            -- top_banner
+            x=886,
+            y=812,
+            width=984,
+            height=178,
+
+            sourceX = 0,
+            sourceY = 0,
+            sourceWidth = 984,
+            sourceHeight = 177
+        },
     },
     
-    sheetContentWidth = 1014,
-    sheetContentHeight = 1210
+    sheetContentWidth = 1872,
+    sheetContentHeight = 1182
 }
 
 SheetInfo.frameIndex =
 {
 
     ["34"] = 1,
-    ["button_back"] = 2,
-    ["button_highscore"] = 3,
-    ["button_how-to-play"] = 4,
-    ["button_ok"] = 5,
-    ["button_ok_square"] = 6,
-    ["button_play"] = 7,
-    ["button_settings"] = 8,
-    ["button_share"] = 9,
-    ["button_shop"] = 10,
-    ["button_x"] = 11,
-    ["cancel"] = 12,
-    ["checkboxchecked"] = 13,
-    ["checkboxempty"] = 14,
-    ["film"] = 15,
+    ["button_highscore"] = 2,
+    ["button_settings"] = 3,
+    ["button_share"] = 4,
+    ["button_x"] = 5,
+    ["cancel"] = 6,
+    ["checkboxchecked"] = 7,
+    ["checkboxempty"] = 8,
+    ["dash"] = 9,
+    ["film"] = 10,
+    ["jump"] = 11,
+    ["pause"] = 12,
+    ["pause_button"] = 13,
+    ["score"] = 14,
+    ["top_banner"] = 15,
 }
 
 function SheetInfo:getSheet()

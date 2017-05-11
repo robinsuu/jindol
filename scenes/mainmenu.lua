@@ -20,6 +20,7 @@ local scene = composer.newScene()
 ----
 local menuSheetInfo = require("scripts.menubuttons")
 local menuBgSheetInfo = require("scripts.mainmenu_images")
+local objectSheetInfo = require("scripts.objects")
 local heroData = require("scripts.herodata")
 local widget = require("widget")
 local sfx = require("scripts.sfx")
@@ -41,6 +42,7 @@ local playButton, highScoreButton, settingsButton, shareButton, howToPlayButton
 local playText, tapToPlayArea
 local coins, cash
 local coinsText, cashText
+local coinIcon, cashIcon
 local sharedItems -- For sharing to social media/messaging
 
 ----
@@ -53,6 +55,7 @@ local playTextTimer
 ----
 local menuButtonImageSheet
 local menuBgImageSheet
+local objectImageSheet
 
 ----
 -- Display groups
@@ -71,8 +74,8 @@ end
 local function loadHeroData()
 	heroData:loadHeroFromFile()
 
-	coins = composer.getVariable("totalCoinsConsumed")
-	cash = composer.getVariable("totalCashConsumed")
+	coins = heroData:getCoins()
+	cash = heroData:getCash()
 end
 
 local function loadSharedItems()
@@ -85,14 +88,12 @@ local function loadSharedItems()
 end
 
 local function initImageSheets()
+	objectImageSheet = graphics.newImageSheet("images/objects.png", objectSheetInfo:getSheet())
 	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
 	menuBgImageSheet = graphics.newImageSheet("images/menu/mainmenu_images.png", menuBgSheetInfo:getSheet())
 end
 
 local function loadBackground()
-	--background = display.newRect(backGroup, contCX, contCY, contW, contH)
-	--background:setFillColor(1, 0.6, 0.6)
-
 	background1 = display.newImageRect(backGroup, "images/menu/bg.png", 1136, 752)
 	background1.x = contCX
 	background1.y = contCY
@@ -120,12 +121,6 @@ local function loadBackground()
 end
 
 local function loadUI()
-	--titleText = display.newEmbossedText(uiGroup, "진돌 & 히디!", contCX, 50, native.systemFontBold, 72)
-
-	--playButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_play"), 301, 151)
-	--playButton.x = contCX
-	--playButton.y = contH-100
-
 	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 92, 96)
 	shareButton.x = 60
 	shareButton.y = 60
@@ -141,22 +136,27 @@ local function loadUI()
 	highScoreButton.y = contH-40
 	highScoreButton.alpha = 0
 
-	--shopButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_shop"), 251, 151)
-	--shopButton.x = contCX-300
-	--shopButton.y = contH-100
+	coinIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("coin"), 50, 50)
+	coinIcon.x = 10
+	coinIcon.y = 140
+	coinIcon.anchorX = 0
+	coinIcon.alpha = 0
 
-	--titleImage = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("34"), 338, 300)
-	--titleImage.x = contCX
-	--titleImage.y = contCY-50
+	cashIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 65, 58)
+	cashIcon.x = 10
+	cashIcon.y = 200
+	cashIcon.anchorX = 0
+	cashIcon.alpha = 0
 
-	coinsText = display.newEmbossedText(uiGroup, "Coins: " .. coins, 10, 140, native.systemFontBold, 36)
+	coinsText = display.newEmbossedText(uiGroup, coins, 80, 140, "BRLNSR.TTF", 36)
 	coinsText.anchorX = 0
-	--coinsText.alpha = 0
-	cashText = display.newEmbossedText(uiGroup, "Cash: " .. cash, 10, 180, native.systemFontBold, 36)
-	cashText.anchorX = 0
-	--cashText.alpha = 0
+	coinsText.alpha = 0
 
-	playText = display.newText(uiGroup, "Tap to play", contCX, contCY, native.systemFont, 72)
+	cashText = display.newEmbossedText(uiGroup, cash, 80, 200, "BRLNSR.TTF", 36)
+	cashText.anchorX = 0
+	cashText.alpha = 0
+
+	playText = display.newText(uiGroup, "Start!", contCX, contCY, "BRLNSR.TTF", 72)
 	playText:setFillColor(0, 0, 0)
 	playText.alpha = 0
 
@@ -188,20 +188,36 @@ end
 
 local function playButtons()
 	transition.to(playText, {
-		time = 500,
+		time = 250,
 		alpha = 1,
 		onComplete=startPlayTextTimer
 		})
 	transition.to(shareButton, {
-		time = 500,
+		time = 250,
 		alpha = 1
 		})
 	transition.to(settingsButton, {
-		time = 500,
+		time = 250,
 		alpha = 1
 		})
 	transition.to(highScoreButton, {
-		time = 500,
+		time = 250,
+		alpha = 1
+		})
+	transition.to(coinIcon, {
+		time = 250,
+		alpha = 1
+		})
+	transition.to(coinsText, {
+		time = 250,
+		alpha = 1
+		})
+	transition.to(cashIcon, {
+		time = 250,
+		alpha = 1
+		})
+	transition.to(cashText, {
+		time = 250,
 		alpha = 1
 		})
 	tapToPlayArea.isHitTestable = true
@@ -209,7 +225,7 @@ end
 
 local function playTalkBubble()
 	transition.to(talkBubble, {
-		time = 500,
+		time = 250,
 		alpha = 1,
 		onComplete = playButtons
 		})
@@ -217,7 +233,7 @@ end
 
 local function playLogo()
 	transition.to(logo, {
-		time = 500,
+		time = 250,
 		y = contH - (logo.height/2) - 10,
 		onComplete=playTalkBubble
 	})
@@ -225,7 +241,7 @@ end
 
 local function playHidi()
 	transition.to(hidi, {
-		time = 500,
+		time = 250,
 		x = contCX+150,
 		onComplete=playLogo
 	})
@@ -233,13 +249,13 @@ end
 
 local function playJindol()
 	transition.to(jindol, {
-		time = 500,
+		time = 250,
 		x = contW/3,
 		--onComplete=playHidi
 	})
 
 		transition.to(hidi, {
-		time = 1000,
+		time = 500,
 		x = contCX+150,
 		onComplete=playLogo
 	})

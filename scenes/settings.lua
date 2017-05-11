@@ -84,14 +84,14 @@ local function checkSettings()
 end
 
 local function loadUI()
-	settingsText = display.newEmbossedText(uiGroup, "Settings", contCX, (display.contentHeight/2)-170, native.systemFont, 60)
+	settingsText = display.newEmbossedText(uiGroup, "Settings", contCX, (display.contentHeight/2)-170, "BRLNSR.TTF", 60)
 	
 	backButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 101, 101)
 	backButton.x = contCX+370
 	backButton.y = contH-530
 
-	audioText = display.newEmbossedText(uiGroup, "Audio: ", contCX-100, (display.contentHeight/2), native.systemFont, 40)
-	bgmText = display.newEmbossedText(uiGroup, "BGM: ", contCX-100, (display.contentHeight/2)+70, native.systemFont, 40)
+	audioText = display.newEmbossedText(uiGroup, "Audio: ", contCX-100, (display.contentHeight/2), "BRLNSR.TTF", 40)
+	bgmText = display.newEmbossedText(uiGroup, "BGM: ", contCX-100, (display.contentHeight/2)+70, "BRLNSR.TTF", 40)
 
 	checkSettings()
 end

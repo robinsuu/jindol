@@ -68,6 +68,9 @@ local magnetActive
 local scoreMultiplier
 local magnetImage, multiplierImage -- For displaying power ups while active
 local soundActive, bgmActive
+local invulnerable -- Invulnerable during retry (5 secs)
+local scoreBanner
+local canPause
 
 ----
 -- Image sheets
@@ -100,7 +103,7 @@ local energyTimer, hidiTimer, powerupTimer, magnetTimer, multiplierTimer
 ----
 -- Display groups
 ----
-local backGroup, uiGroup, mainGroup, groundGroup
+local backGroup, uiGroup, mainGroup, groundGroup, scoreBannerGroup
 
 ----
 -- Functions
@@ -111,6 +114,7 @@ local function initDisplayGroups()
 	uiGroup = display.newGroup()
 	mainGroup = display.newGroup()
 	groundGroup = display.newGroup()
+	scoreBannerGroup = display.newGroup()
 end
 
 local function getDeltaTime()
@@ -164,6 +168,8 @@ local function initVariables()
 	magnetActive = false
 	soundActive = false
 	bgmActive = false
+	invulnerable = false
+	canPause = true
 	scoreMultiplier = 1
 	composer.setVariable("allowedToQuit", false) -- For making sure that the death animation is finished before you can continue
 
@@ -186,7 +192,7 @@ local function initCoinPatterns()
 end
 
 local function loadMemoryMonitor()
-	memoryText = display.newText(uiGroup, "", contW-30, 30, native.systemFont, 30)
+	memoryText = display.newText(uiGroup, "", 300, 30, native.systemFont, 30)
 	memoryText.anchorX = 1
 	memoryText:setFillColor(0,0,0)
 end
@@ -282,10 +288,23 @@ local function getObjectProperties(index)
 end
 
 local function loadUI()
-	jumpButton = display.newEmbossedText(uiGroup, "JUMP", 70, contH-40, native.systemFont, 44)
-	dashButton = display.newEmbossedText(uiGroup, "DASH", contW-70, contH-40, native.systemFont, 44)
-	meterText = display.newEmbossedText(uiGroup, "0 meters", contCX, 30, native.systemFont, 30)
-	meterText.anchorX = 0.5 -- Aligned center
+	jumpButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("jump"), 99, 72)
+	jumpButton.x = 70
+	jumpButton.y = contH-40
+
+	dashButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("dash"), 99, 72)
+	dashButton.x = contW-70
+	dashButton.y = contH-40
+
+	scoreBanner = display.newImageRect(scoreBannerGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("top_banner"), 492, 89)
+	scoreBanner.x = contCX
+	scoreBanner.y = 44
+
+	meterText = display.newEmbossedText(uiGroup, "0", contCX-35, 20, "BRLNSR.TTF", 24)
+	meterText.anchorX = 0 -- Aligned left
+
+	scoreText = display.newEmbossedText(uiGroup, "0", contCX+100, 20, "BRLNSR.TTF", 30)
+	scoreText.anchorX = 0 -- Aligned left
 
 	local index = getObjectIndex("coin")
 	local properties = getObjectProperties(index)
@@ -301,20 +320,19 @@ local function loadUI()
 	cashIcon.y = 70
 	cashIcon.anchorX = 0
 
-	coinsText = display.newEmbossedText(uiGroup, "0", 60, 30, native.systemFont, 30)
+	coinsText = display.newEmbossedText(uiGroup, "0", 60, 30, "BRLNSR.TTF", 30)
 	coinsText.anchorX = 0 -- Aligned left
-	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, native.systemFont, 30)
+	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, "BRLNSR.TTF", 30)
 	cashText.anchorX = 0 -- Aligned left
-	scoreText = display.newEmbossedText(uiGroup, "Score: 0", contCX, 70, native.systemFont, 30)
-	scoreText.anchorX = 0.5 -- Aligned middle
 
-	energyMeter = display.newRect(uiGroup, contW-30, 70, (energy * 3), 30)
-	energyMeter:setFillColor(0, 0.8, 0)
-	energyMeter.anchorX = 1
+	energyMeter = display.newRect(uiGroup, contCX, 65, (energy * 3), 25)
+	energyMeter:setFillColor(1, 0.8, 1)
+	energyMeter.anchorX = 0.5
 
-	pauseButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 50, 50)
-	pauseButton.x = contW-300
-	pauseButton.y = 25
+	pauseButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("pause_button"), 98, 89)
+	--pauseButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 50, 50)
+	pauseButton.x = contW-49
+	pauseButton.y = 44
 
 	multiplierImage = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("2xmultiplier"), 33, 34)
 	multiplierImage.x = contCX
@@ -666,8 +684,8 @@ end
 local function updateScore()
 	metersRun = metersRun + (0.05 * gameSpeed)-- * dt -- Meter updates depending on game speed
 	score = score + (0.05 * gameSpeed * scoreMultiplier)
-	meterText.text = math.floor(metersRun) .. " meters"
-	scoreText.text = "Score: " .. math.floor(score)
+	meterText.text = math.floor(metersRun)
+	scoreText.text = math.floor(score)
 end
 
 local function updateScreen()
@@ -709,6 +727,7 @@ end
 
 local function popDeath()
 	hero:toFront()
+	canPause = false
 	gameOver = true
 		timer.performWithDelay(1, function()
 		physics.pause()
@@ -727,13 +746,13 @@ local function popDeath()
 end
 
 local function checkEnergyStatus()
-	local energyGradient = {
+	--[[local energyGradient = {
 		type = "gradient",
 		color1 = { 1, 0.8, 1 }, -- 1, 0.8, 0
 		color2 = { 1, 1, 1 }, -- 1, 1, 1
 		direction = "right"
 	}
-	energyMeter.fill = energyGradient
+	energyMeter.fill = energyGradient]]
 
 	if(energy <= 0) then
 		popDeath()
@@ -916,6 +935,7 @@ end
 local function checkHeroPosition()
 	-- Check if the player has fallen down a gap
 	if(hero.y > contH+hero.height) then
+		canPause = false
 		gameOver = true
 		composer.setVariable("allowedToQuit", true)
 	end
@@ -988,11 +1008,6 @@ local function performGameOver()
 		transition.cancel(heroCollisionTransition)
 	end
 
-	--hidi:pause()
-	--hero:pause()
-
-	--Runtime:removeEventListener("collision", onCollision)
-
 	-------------------
 
 	print("<<Game Over>>")
@@ -1003,7 +1018,6 @@ local function performGameOver()
 	composer.setVariable("finalCoinsConsumed", coinsConsumed)
 	composer.setVariable("finalCashConsumed", cashConsumed)
 	timer.performWithDelay(1000, function() composer.showOverlay("scenes.gameover", { isModal=true }) end, 1) -- Experimental
-	--composer.showOverlay("scenes.gameover")
 	composer.setVariable("gamePaused", false)
 	isPaused = false
 	gameOverPerformed = true
@@ -1108,72 +1122,76 @@ local function onCollision(event)
 					obstacle = obj2
 			end
 
-			collideWithObstacle(obstacle)
+			if(not invulnerable) then
+				collideWithObstacle(obstacle)
+			end
 		end
 	end
 end
 
 local function pauseGame()
-	isPaused = true
-	composer.setVariable("gamePaused", true)
+	if(canPause) then
+		isPaused = true
+		composer.setVariable("gamePaused", true)
 
-	physics.pause()
+		physics.pause()
 
-	if(dashTimer) then
-		timer.pause(dashTimer)
-	end
-	if(coinTimer) then
-		timer.pause(coinTimer)
-	end
-	if(foodTimer) then
-		timer.pause(foodTimer)
-	end
-	if(cashTimer) then
-		timer.pause(cashTimer)
-	end
-	if(speedTimer) then
-		timer.pause(speedTimer)
-	end
-	if(powerupTimer) then
-		timer.pause(powerupTimer)
-	end
-	if(energyTimer) then
-		timer.pause(energyTimer)
-	end
-	if(hidiTimer) then
-		timer.pause(hidiTimer)
-	end
+		if(dashTimer) then
+			timer.pause(dashTimer)
+		end
+		if(coinTimer) then
+			timer.pause(coinTimer)
+		end
+		if(foodTimer) then
+			timer.pause(foodTimer)
+		end
+		if(cashTimer) then
+			timer.pause(cashTimer)
+		end
+		if(speedTimer) then
+			timer.pause(speedTimer)
+		end
+		if(powerupTimer) then
+			timer.pause(powerupTimer)
+		end
+		if(energyTimer) then
+			timer.pause(energyTimer)
+		end
+		if(hidiTimer) then
+			timer.pause(hidiTimer)
+		end
 
-	if(multiplierTimer) then
-		timer.pause(multiplierTimer)
-	end
+		if(multiplierTimer) then
+			timer.pause(multiplierTimer)
+		end
 
-	if(magnetTimer) then
-		timer.pause(magnetTimer)
-	end
+		if(magnetTimer) then
+			timer.pause(magnetTimer)
+		end
 
-	if(jumpTransition) then
-		transition.pause(jumpTransition)
-	end
-	if(dashTransition) then
-		transition.pause(dashTransition)
-	end
-	if(hidiTransition) then
-		transition.pause(hidiTransition)
-	end
-	if(obstacleCollisionTransition) then
-		transition.pause(obstacleCollisionTransition)
-	end
-	if(heroCollisionTransition) then
-		transition.pause(heroCollisionTransition)
-	end
+		if(jumpTransition) then
+			transition.pause(jumpTransition)
+		end
+		if(dashTransition) then
+			transition.pause(dashTransition)
+		end
+		if(hidiTransition) then
+			transition.pause(hidiTransition)
+		end
+		if(obstacleCollisionTransition) then
+			transition.pause(obstacleCollisionTransition)
+		end
+		if(heroCollisionTransition) then
+			transition.pause(heroCollisionTransition)
+		end
 
-	hidi:pause()
-	hero:pause()
+		hidi:pause()
+		hero:pause()
 
-	print("<<Paused game>>")
+		print("<<Paused game>>")
 
-	composer.showOverlay("scenes.pause", { isModal=true })
+		composer.showOverlay("scenes.pause", { isModal=true })
+	end
 end
 
 local function gameLoop(event)
@@ -1257,14 +1275,19 @@ local function continueGame()
 	gameOverPerformed = false
 	gameOver = false
 	composer.setVariable("okToCleanup", true)
+
+	invulnerable = true
+	hero.alpha = 0.5
+	timer.performWithDelay(5000, function() hero.alpha = 1 invulnerable = false end, 1)
+
+	cashText.text = composer.getVariable("finalCashConsumed")
+
 	print("<<Continued game>>")
 end
 
 -- Resume game after pause
 local function resumeGame()
 	physics.start()
-
-	--loadEventListeners()
 
 	if(dashTimer) then
 		timer.resume(dashTimer)
@@ -1321,7 +1344,6 @@ local function resumeGame()
 	isPaused = false
 
 	print("<<Resumed game>>")
---end
 end
 
 -- -----------------------------------------------------------------------------------
@@ -1336,6 +1358,7 @@ function scene:create(event)
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(groundGroup)
+	sceneGroup:insert(scoreBannerGroup)
 	sceneGroup:insert(mainGroup)
 	sceneGroup:insert(uiGroup)
 
@@ -1380,8 +1403,6 @@ function scene:show(event)
 			playBgm()
 			print("Fresh start!")
 		elseif(composer.getVariable("gamePaused")) then -- If it bugs out change this to a normal else
-			--Runtime:addEventListener("enterFrame", gameLoop)
-			--Runtime:addEventListener("collision", onCollision)
 			resumeGame()	
 			print("Resume after pause!")
 		elseif(composer.getVariable("continueGame")) then
@@ -1468,7 +1489,8 @@ function scene:hide(event)
 			display.remove(groundGroup)
 			display.remove(uiGroup)
 			display.remove(mainGroup)
-			backGroup, groundGroup, uiGroup, mainGroup = nil, nil, nil, nil
+			display.remove(scoreBannerGroup)
+			backGroup, groundGroup, uiGroup, mainGroup, scoreBannerGroup = nil, nil, nil, nil, nil
 			print("Removed all display elements")
 		end
 	end

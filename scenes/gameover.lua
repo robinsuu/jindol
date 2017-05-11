@@ -77,15 +77,6 @@ local function loadCash()
 	end
 end
 
-local function loadBackground()
-	--background = display.newRect(uiGroup, contCX, contCY, contW, contH)
-	--background.alpha = 0
-	--background:setFillColor(0.5, 0.5, 0.5)
-	--background = display.newRect(uiGroup, contCX, contCY, contW/1.5, contH/1.5)
-	--background:setFillColor(0.5, 0.8, 1)
-	--background.isHitTestable = true
-end
-
 local function loadUI()
 	cashContinueIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 240, 210)
 	cashContinueIcon.x = contCX-250
@@ -104,7 +95,7 @@ local function loadUI()
 	cashIcon.y = (display.contentHeight/2)-200
 	cashIcon.anchorX = 0
 
-	cashText = display.newEmbossedText(uiGroup, (cash + newCash), contCX, (display.contentHeight/2)-200, native.systemFont, 50)
+	cashText = display.newEmbossedText(uiGroup, (cash + newCash), contCX, (display.contentHeight/2)-200, "BRLNSR.TTF", 50)
 	cashText.anchorX = 0
 	cashText:setFillColor(0)
 end
@@ -145,9 +136,9 @@ local function checkCash()
 end
 
 local function gotoHighScores()
-	--local allowedToQuit = composer.getVariable("allowedToQuit")
-	local allowedToQuit = true
+	local allowedToQuit = composer.getVariable("allowedToQuit")
 	if(allowedToQuit) then
+		composer.setVariable("okToCleanup", true)
 		composer.gotoScene("scenes.highscore")
 	end
 end
@@ -157,13 +148,12 @@ end
 ----
 local function adListener(event)
 	if(event.phase == "init") then -- Successful initiation
-		--appodeal.show("rewardedVideo")
+		appodeal.load("rewardedVideo")
 	elseif(event.phase == "failed") then -- The ad failed to load
 		print(event.type)
 		print(event.isError)
 		print(event.response)
 	elseif(event.phase == "loaded") then
-		--appodeal.show("rewardedVideo")
 	end
 
 	if(event.phase == "playbackEnded") then
@@ -177,9 +167,11 @@ local function adListener(event)
 end
 
 function playAd()
+	print("Attempting to play ad")
 	if(not composer.getVariable("continuePerformed") and not adStarted) then
-		adStarted = true
+		print("Showing ad")
 		appodeal.show("rewardedVideo")
+		adStarted = true
 	end
 end
 
@@ -210,15 +202,15 @@ function scene:create(event)
 	initDisplayGroups()
 	sceneGroup:insert(uiGroup)
 
+	if(not composer.getVariable("continuePerformed")) then
+		initAds()
+	end
+
 	initVariables()
 	initImageSheets()
 
 	loadCash()
 	loadUI()
-
-	if(not composer.getVariable("continuePerformed")) then
-		initAds()
-	end
 end
 
 -- show()

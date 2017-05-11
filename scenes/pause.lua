@@ -42,7 +42,6 @@ local backGroup, uiGroup
 ----
 -- Functions
 ----
--- If adding more display groups, don't forget to insert them into the scene group at scene:create
 local function initDisplayGroups()
 	backGroup = display.newGroup()
 	uiGroup = display.newGroup()
@@ -53,20 +52,18 @@ local function initImageSheets()
 end
 
 local function loadBackground()
-	background = display.newRect(backGroup, contCX, contCY, contW/1.5, contH/1.5)
-	background:setFillColor(0.5, 0.8, 1)
+	background = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("pause"), 355, 251)
+	background.x = contCX
+	background.y = contCY
 end
 
 local function loadUI()
-	settingsText = display.newEmbossedText(uiGroup, "Pause", contCX, (display.contentHeight/2)-170, native.systemFont, 60)
-	
-	backButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_x"), 101, 101)
-	backButton.x = contCX+370
-	backButton.y = contH-530
+	backButton = display.newRect(uiGroup, contCX, contCY, 200, 200)
+	backButton.alpha = 0
+	backButton.isHitTestable = true
 end
 
 local function gotoGame()
-	--composer.setVariable("gamePaused", false)
 	composer.gotoScene("scenes.game")
 end
 
@@ -83,7 +80,6 @@ function scene:create(event)
 
 	local sceneGroup = self.view
 	-- Code here runs when the scene is first created but has not yet appeared on screen
-
 	initDisplayGroups()
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(uiGroup)
@@ -104,7 +100,6 @@ function scene:show(event)
 
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
-		--composer.removeScene("scenes.game", false)
 		loadEventListeners()
 	end
 end

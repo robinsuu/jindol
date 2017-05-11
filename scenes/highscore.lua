@@ -33,7 +33,7 @@ local contH = display.contentHeight
 ----
 -- Fields
 ----
-local background1, background2
+local background1, background2, foreground
 local titleText, scoreText, okText
 local highscoreFilePath
 local score, metersRun, coinsConsumed, cashConsumed
@@ -81,8 +81,6 @@ local function initImageSheets()
 end
 
 local function loadBackground()
-	--background = display.newRect(backGroup, contCX, contCY, contW, contH)
-	--background:setFillColor(1, 0.6, 0.6)
 	background1 = display.newImageRect(backGroup, "images/menu/bg.png", 1136, 752)
 	background1.x = contCX
 	background1.y = contCY
@@ -90,12 +88,16 @@ local function loadBackground()
 	background2 = display.newImageRect(backGroup, "images/menu/bg_front.png", 1136, 514)
 	background2.x = contCX
 	background2.y = contCY+63
+
+	foreground = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("score"), 499, 355)
+	foreground.x = contCX
+	foreground.y = contCY
 end
 
 local function loadUI()
-	highScoreTitleText = display.newEmbossedText(uiGroup, "High Scores", contCX, 50, native.systemFont, 72)
+	highScoreTitleText = display.newEmbossedText(uiGroup, "High Scores", contCX, 50, "BRLNSR.TTF", 72)
 
-	okText = display.newEmbossedText(uiGroup, "Tap to return to main menu", contCX, contH-50, native.systemFont, 72)
+	okText = display.newEmbossedText(uiGroup, "홈으로", contCX, contH-50, "BRLNSR.TTF", 72)
 end
 
 local function loadScoresFromFile()
@@ -139,22 +141,18 @@ local function loadScores()
 	saveScoresToFile()
 
 	if(score and score ~= 0) then
-		scoreText = display.newText(uiGroup, "Your score: " .. score, display.contentCenterX, 150, native.systemFont, 36)
+		scoreText = display.newEmbossedText(uiGroup, "Your score: " .. score, display.contentCenterX, 120, "BRLNSR.TTF", 36)
 	end
 
 	for i=1, 5 do
 		if(scoresTable[i]) then
-			local yPos = 200 + (i * 56)
+			local yPos = 230 + (i * 30) -- Default 230 + (i * 30)
 
-			if(not score or score == 0) then
-				yPos = 100 + (i * 56)
-			end
-
-			local rankNum = display.newText(uiGroup, "#" .. i, contCX-50, yPos, native.systemFont, 36)
+			local rankNum = display.newText(uiGroup, "#" .. i, contCX-30, yPos, "BRLNSR.TTF", 24)
 			rankNum:setFillColor(0)
-			rankNum.anchorX = 1
+			rankNum.anchorX = 0.5
 
-			local thisScore = display.newText(uiGroup, scoresTable[i], contCX-30, yPos, native.systemFont, 36)
+			local thisScore = display.newText(uiGroup, scoresTable[i], contCX-10, yPos, "BRLNSR.TTF", 24)
 			thisScore.anchorX = 0
 			thisScore:setFillColor(0)
 		end

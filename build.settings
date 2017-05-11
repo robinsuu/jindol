@@ -28,12 +28,13 @@ settings =
 	{
 		plist =
 		{
+			UILaunchStoryboardName = "LaunchScreen", -- For livebuild to work
 			UIStatusBarHidden = false,
 			UIPrerenderedIcon = true, -- set to false for "shine" overlay
 			--UIApplicationExitsOnSuspend = true, -- uncomment to quit app on suspend
 
 			-- The below two lines are for appodeal
-			MinimumOSVersion = "8.0",
+			--MinimumOSVersion = "8.0", -- Default this is uncommented /RF
             NSAppTransportSecurity = { NSAllowsArbitraryLoads=true },
 
 			CFBundleIconFiles =
