@@ -169,7 +169,7 @@ local function playBgm()
 	if(composer.getVariable("bgmActive")) then
 		audio.reserveChannels(1)
 		audio.setVolume(0.5, { channel=1 })
-		--audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
+		audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
 	end
 end
 

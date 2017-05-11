@@ -148,7 +148,7 @@ local function initVariables()
 	dt = getDeltaTime()
 	metersRun = 0
 	coinsConsumed = 0
-	cashConsumed = 100 -- Default 0
+	cashConsumed = 0 -- Default 0
 	foodConsumed = 0
 	energy = 100
 	score = 0
@@ -349,7 +349,7 @@ end
 
 local function playBgm()
 	if(composer.getVariable("bgmActive")) then
-		--audio.play(sfx.gameMusic, { loops=-1, channel=1 })
+		audio.play(sfx.gameMusic, { loops=-1, channel=1 })
 	end
 end
 
@@ -1276,7 +1276,7 @@ local function continueGame()
 	hidi:setSequence("normalRun")
 	hidi:play()
 
-	--isPaused = false
+	canPause = true
 	gameOverPerformed = false
 	gameOver = false
 	composer.setVariable("okToCleanup", true)
