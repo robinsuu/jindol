@@ -148,7 +148,7 @@ end
 ----
 local function adListener(event)
 	if(event.phase == "init") then -- Successful initiation
-		appodeal.load("rewardedVideo")
+		--appodeal.load("rewardedVideo")
 	elseif(event.phase == "failed") then -- The ad failed to load
 		print(event.type)
 		print(event.isError)

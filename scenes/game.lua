@@ -18,6 +18,9 @@ local physics = require("physics") -- Box2d physics engine
 local physicsDef = require("scripts.physicsdef").physicsData(1.0) -- Physics definition
 local sfx = require("scripts.sfx") -- Sound effects
 local emitters = require("scripts.emitters") -- Particle emitters (special effects)
+local obstaclePatterns = require("scripts.obstaclepatterns")
+local coinPatterns = require("scripts.coinpatterns") -- Holds the coordinates for different coin patterns
+local groundSections = require("scripts.groundsections") -- Holds the properties of the different ground sections
 
 ----
 -- Image sheet info
@@ -76,7 +79,8 @@ local soundActive, bgmActive
 local invulnerable -- Invulnerable during retry (5 secs)
 local scoreBanner
 local canPause
-local coinEmitter, dashEmitter
+local dashEmitter, coinEmitterParams
+local okToCreateObstacle
 
 ----
 -- Image sheets
@@ -91,20 +95,19 @@ local heroSequences, hidiSequences
 ----
 -- Tables
 ----
-local groundSections -- Holds the properties of the different ground sections
 local groundTable -- Holds the actual ground sections displayed in the world
-local coinPatterns -- Holds the coordinates for different coin patterns
 local coinTable -- Holds the coins displayed in the world
 local obstacleTable -- Holds the obstacles displayed in the world
 local foodTable -- Holds the food displayed in the world
 local cashTable -- Holds the cash displayed in the world
 local powerupTable -- Holds the power ups displayed in the world
+local coinEmitterTable -- Holds the particle emissions for consuming coins
 
 ----
 -- Timers
 ----
 local coinTimer, dashTimer, foodTimer, cashTimer, speedTimer -- speedTimer is for incrementally increasing the speed of the game
-local energyTimer, hidiTimer, powerupTimer, magnetTimer, multiplierTimer
+local energyTimer, hidiTimer, powerupTimer, magnetTimer, multiplierTimer, obstacleTimer -- obstacletimer is used to load obstacles at intervals
 
 ----
 -- Display groups
@@ -143,6 +146,7 @@ local function initVariables()
 	foodTable = {}
 	cashTable = {}
 	powerupTable = {}
+	coinEmitterTable = {}
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	mainSpeed = 12 -- Default: 10 (the speed of interactable objects)
@@ -150,6 +154,7 @@ local function initVariables()
 	isDashing = false
 	gameOver = false
 	gameOverPerformed = false
+	okToCreateObstacle = true
 	runtime = 0
 	dt = getDeltaTime()
 	metersRun = 0
@@ -170,6 +175,7 @@ local function initVariables()
 	multiplierTimer = nil
 	speedTimer = nil
 	hidiTimer = nil
+	obstacleTimer = nil
 	isPaused = false
 	magnetActive = false
 	soundActive = false
@@ -187,14 +193,6 @@ local function initImageSheets()
 	heroImageSheet = graphics.newImageSheet("images/hero/hero.png", heroSheetInfo:getSheet())
 	hidiImageSheet = graphics.newImageSheet("images/background/hidi.png", hidiSheetInfo:getSheet())
 	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
-end
-
-local function initGroundSections()
-	groundSections = require("scripts.groundsections")
-end
-
-local function initCoinPatterns()
-	coinPatterns = require("scripts.coinpatterns")
 end
 
 local function loadMemoryMonitor()
@@ -252,11 +250,27 @@ end
 -- Particle emitter functions
 ----
 local function loadParticleEmitters()
-	local coinEmitterParams = emitters:getCoinEmitter()
-	local dashEmitterParams = emitters:getDashEmitter()
+	coinEmitterParams = emitters:getCoinEmitter()
+	local dashEmitterParams = emitters:getDashEmitter() -- This one is temporary
 
-	coinEmitter = display.newEmitter(coinEmitterParams)
+	--coinEmitter = display.newEmitter(coinEmitterParams)
+	--coinEmitter:stop()
 	dashEmitter = display.newEmitter(dashEmitterParams)
+	dashEmitter:stop()
+end
+
+local function playCoinEmitter(x, y)
+	local coinEmitterParams = emitters:getCoinEmitter()
+	local newCoinEmitter = display.newEmitter(coinEmitterParams)
+	table.insert(coinEmitterTable, newCoinEmitter)
+	local index = #coinEmitterTable
+	newCoinEmitter.x = x
+	newCoinEmitter.y = y
+	newCoinEmitter:start()
+	timer.performWithDelay(500, function() 
+		newCoinEmitter:stop()
+		table.remove(coinEmitterTable, index)
+	end, 1)
 end
 
 ----
@@ -342,7 +356,7 @@ local function loadUI()
 	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, "BRLNSR.TTF", 30)
 	cashText.anchorX = 0 -- Aligned left
 
-	energyMeter = display.newRect(scoreBannerGroup, contCX, 65, (energy * 3), 25)
+	energyMeter = display.newRect(scoreBannerGroup, contCX, 65, (energy * 4), 25)
 	energyMeter:setFillColor(1, 0.8, 1)
 	energyMeter.anchorX = 0.5
 
@@ -366,7 +380,7 @@ end
 
 local function playBgm()
 	if(composer.getVariable("bgmActive")) then
-		audio.play(sfx.gameMusic, { loops=-1, channel=1 })
+		--audio.play(sfx.gameMusic, { loops=-1, channel=1 })
 	end
 end
 
@@ -470,7 +484,7 @@ local function createRandomCoinPattern()
 	end
 end
 
-local function createObstacle(obstacleType, xPos)
+local function createObstacle(obstacleType, xPos, ability)
 	local index = getObjectIndex(obstacleType)
 	local properties = getObjectProperties(index)
 	local newObstacle = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
@@ -485,19 +499,31 @@ local function createObstacle(obstacleType, xPos)
 end
 
 local function createRandomObstacle(xPos)
-	local randNum = mRand(4)
-	if(randNum == 1) then
-		createObstacle("broccoli", xPos)
-	elseif(randNum == 2) then
-		createObstacle("carrot", xPos)
-	elseif(randNum == 3) then
-		createObstacle("tomato_small", xPos-300)
-		createObstacle("tomato_small", xPos-150)
-		createObstacle("tomato_small", xPos)
-		createObstacle("tomato_small", xPos+150)
-	elseif(randNum == 4) then
-		createObstacle("tomato_big", xPos)
+	--local obstacles = {}
+	--obstacles = obstaclePatterns
+	local randNum = mRand(#obstaclePatterns)
+	local newObstacle = obstaclePatterns[randNum]
+
+	if(newObstacle.count == 1) then
+		createObstacle(newObstacle.name, xPos, newObstacle.ability)
+	elseif(newObstacle.count > 1) then
+		for i=1, newObstacle.count, 1 do
+			createObstacle(newObstacle.name, (xPos + (150 * i) - 600), newObstacle.ability)
+		end
 	end
+
+	--[[
+	if(randNum == 1) then
+		createObstacle(obstaclePatterns["smallTomatoOne"], xPos)
+	elseif(randNum == 2) then
+		createObstacle(obstaclePatterns["carrotOne"], xPos)
+	elseif(randNum == 3) then
+		--for i=1
+	elseif(randNum == 4) then
+		--createObstacle("tomato_big", xPos)
+	elseif(randNum == 5) then
+	elseif(randNum == 6) then
+	end]]
 end
 
 local function createGroundSection(name)
@@ -515,8 +541,12 @@ local function createGroundSection(name)
 		physics.addBody(newObj, "static", { bounce=0, density=0 })
 
 		-- Chance of spawning obstacle
-		if(metersRun > 10 and mRand(3) == 1 and #obstacleTable < 3 and lastGroundType == "middleGround") then
-			createRandomObstacle(newObj.x)
+		if(metersRun > 5 and mRand(3) == 1 and #obstacleTable < 4 and lastGroundType == "middleGround") then
+			if(okToCreateObstacle) then
+				createRandomObstacle(newObj.x)
+				okToCreateObstacle = false
+				obstacleTimer = timer.performWithDelay(500, function() okToCreateObstacle = true end, 1)
+			end
 		end
 	end
 	table.insert(groundTable, newObj)
@@ -779,11 +809,11 @@ end
 local function addEnergy(energyAdded)
 	if(energy < 100) then
 		energy = energy + energyAdded
-		energyMeter.width = energyMeter.width + (energyAdded * 3)
+		energyMeter.width = energyMeter.width + (energyAdded * 4)
 		checkEnergyStatus()
 		if(energy > 100) then
 			energy = 100
-			energyMeter.width = 100 * 3
+			energyMeter.width = 100 * 4
 			checkEnergyStatus()
 		end
 	end
@@ -792,7 +822,7 @@ end
 local function removeEnergy(energyRemoved)
 	if(energy > 0) then
 		energy = energy - energyRemoved
-		energyMeter.width = energyMeter.width - (energyRemoved * 3)
+		energyMeter.width = energyMeter.width - (energyRemoved * 4)
 		checkEnergyStatus()
 	end
 end
@@ -908,15 +938,13 @@ end
 
 local function consumeCoin(coin)
 	if(not gameOver) then
-		transition.to(coin, { time=250, x=-100, y=-coin.height})
-
 		if(not coin.consumed) then
 			if(soundActive) then
 				audio.play(sfx.coinSound)
 			end
-			coinEmitter:start()
-			coinEmitter.x = hero.x
-			coinEmitter.y = hero.y
+			transition.to(coin, { time=250, x=-100, y=-coin.height})
+			playCoinEmitter(hero.x, hero.y)
+			transition.to(coinEmitterTable[#coinEmitterTable], { time=500, x=-100, y=coin.height})
 			coinsConsumed = coinsConsumed + 1
 			coinsText.text = coinsConsumed
 			score = score + (1 * scoreMultiplier)
@@ -999,6 +1027,9 @@ local function performGameOver()
 	end
 	if(cashTimer) then
 		timer.pause(cashTimer)
+	end
+	if(obstacleTimer) then
+		timer.pause(obstacleTimer)
 	end
 	if(speedTimer) then
 		timer.pause(speedTimer)
@@ -1176,6 +1207,9 @@ local function pauseGame()
 		end
 		if(cashTimer) then
 			timer.pause(cashTimer)
+		end
+		if(obstacleTimer) then
+			timer.pause(obstacleTimer)
 		end
 		if(speedTimer) then
 			timer.pause(speedTimer)
@@ -1394,8 +1428,6 @@ function scene:create(event)
 
 	initVariables()
 	initImageSheets()
-	initGroundSections()
-	initCoinPatterns()
 
 	loadBackground()
 	loadScenery()
@@ -1506,9 +1538,12 @@ function scene:hide(event)
 			multiplierTimer = nil
 			energyTimer = nil
 			hidiTimer = nil
-			coinEmitter = nil
+			
+			dashEmitter:stop()
 			dashEmitter = nil
-			print("Canceled and cleaned up timers")
+			coinEmitterTable = nil
+
+			print("Canceled timers/listeners/emitters and cleaned up memory")
 		else
 			--Runtime:removeEventListener("enterFrame", gameLoop)
 			--Runtime:removeEventListener("collision", onCollision)
