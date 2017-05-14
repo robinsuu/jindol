@@ -14,13 +14,18 @@ local scene = composer.newScene()
 ----
 -- Requires
 ----
-local physics = require("physics")
-local physicsDef = require("scripts.physicsdef").physicsData(1.0)
+local physics = require("physics") -- Box2d physics engine
+local physicsDef = require("scripts.physicsdef").physicsData(1.0) -- Physics definition
+local sfx = require("scripts.sfx") -- Sound effects
+local emitters = require("scripts.emitters") -- Particle emitters (special effects)
+
+----
+-- Image sheet info
+----
 local objectSheetInfo = require("scripts.objects")
 local heroSheetInfo = require("scripts.hero")
 local hidiSheetInfo = require("scripts.hidi")
 local menuSheetInfo = require("scripts.menubuttons")
-local sfx = require("scripts.sfx")
 
 ----
 -- Physics
@@ -71,6 +76,7 @@ local soundActive, bgmActive
 local invulnerable -- Invulnerable during retry (5 secs)
 local scoreBanner
 local canPause
+local coinEmitter, dashEmitter
 
 ----
 -- Image sheets
@@ -240,6 +246,17 @@ local function loadForeground()
 	foreground3 = display.newImageRect(backGroup, "images/background/cookiebg.png", 1136, 185)
 	foreground3.x = foreground2.x+1136
 	foreground3.y = contH-90
+end
+
+----
+-- Particle emitter functions
+----
+local function loadParticleEmitters()
+	local coinEmitterParams = emitters:getCoinEmitter()
+	local dashEmitterParams = emitters:getDashEmitter()
+
+	coinEmitter = display.newEmitter(coinEmitterParams)
+	dashEmitter = display.newEmitter(dashEmitterParams)
 end
 
 ----
@@ -809,6 +826,7 @@ local function dashEnding()
 	isDashing = false
 	gameSpeed = 1
 	transition.cancel(dashTransition)
+	dashEmitter:stop()
 	
 	if(dashTimer) then
 		timer.cancel(dashTimer)
@@ -822,6 +840,9 @@ end
 local function performDash()
 	hero:setSequence("dashRun")
 	hero:play()
+	dashEmitter.x = hero.x
+	dashEmitter.y = hero.y
+	dashEmitter:start()
 	gameSpeed = 2.5
 
 	if(hidiTimer) then
@@ -893,6 +914,9 @@ local function consumeCoin(coin)
 			if(soundActive) then
 				audio.play(sfx.coinSound)
 			end
+			coinEmitter:start()
+			coinEmitter.x = hero.x
+			coinEmitter.y = hero.y
 			coinsConsumed = coinsConsumed + 1
 			coinsText.text = coinsConsumed
 			score = score + (1 * scoreMultiplier)
@@ -1378,6 +1402,7 @@ function scene:create(event)
 	loadForeground()
 	loadGround()
 	loadMemoryMonitor()
+	loadParticleEmitters()
 	loadAnimations()
 	loadHero()
 	loadHidi()
@@ -1481,6 +1506,8 @@ function scene:hide(event)
 			multiplierTimer = nil
 			energyTimer = nil
 			hidiTimer = nil
+			coinEmitter = nil
+			dashEmitter = nil
 			print("Canceled and cleaned up timers")
 		else
 			--Runtime:removeEventListener("enterFrame", gameLoop)
