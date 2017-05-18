@@ -38,7 +38,7 @@ local contH = display.contentHeight
 ----
 local background1, background2
 local hidi, jindol, logo, talkBubble
-local playButton, highScoreButton, settingsButton, shareButton, howToPlayButton
+local playButton, highScoreButton, settingsButton, shareButton, contactButton
 local playText, tapToPlayArea
 local coins, cash
 local coinsText, cashText
@@ -121,20 +121,25 @@ local function loadBackground()
 end
 
 local function loadUI()
-	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 92, 96)
+	shareButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_share"), 49, 51)
 	shareButton.x = 60
 	shareButton.y = 60
 	shareButton.alpha = 0
 
-	settingsButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_settings"), 88, 88)
+	settingsButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_settings"), 58, 57)
 	settingsButton.x = contW-60
 	settingsButton.y = 60
 	settingsButton.alpha = 0
 
-	highScoreButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_highscore"), 96, 60)
+	highScoreButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_highscore"), 67, 72)
 	highScoreButton.x = 60
-	highScoreButton.y = contH-40
+	highScoreButton.y = contH-50
 	highScoreButton.alpha = 0
+
+	contactButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("button_contact"), 55, 41)
+	contactButton.x = 140
+	contactButton.y = contH-50
+	contactButton.alpha = 0
 
 	coinIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("coin"), 50, 50)
 	coinIcon.x = 10
@@ -169,7 +174,7 @@ local function playBgm()
 	if(composer.getVariable("bgmActive")) then
 		audio.reserveChannels(1)
 		audio.setVolume(0.5, { channel=1 })
-		--audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
+		audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
 	end
 end
 
@@ -201,6 +206,10 @@ local function playButtons()
 		alpha = 1
 		})
 	transition.to(highScoreButton, {
+		time = 250,
+		alpha = 1
+		})
+	transition.to(contactButton, {
 		time = 250,
 		alpha = 1
 		})
@@ -330,14 +339,18 @@ local function gotoHighScore()
 	composer.gotoScene("scenes.highscore")
 end
 
+local function gotoContact()
+	composer.showOverlay("scenes.contact", { isModal=true })
+end
+
 local function gotoSettings()
-	--timer.pause(playTextTimer)
 	composer.showOverlay("scenes.settings", { isModal=true })
 end
 
 local function loadEventListeners()
 	--playButton:addEventListener("tap", gotoGame)
 	highScoreButton:addEventListener("tap", gotoHighScore)
+	contactButton:addEventListener("tap", gotoContact)
 	--playText:addEventListener("tap", gotoGame)
 	tapToPlayArea:addEventListener("tap", gotoGame)
 	settingsButton:addEventListener("tap", gotoSettings)

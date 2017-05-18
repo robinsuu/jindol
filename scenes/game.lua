@@ -365,7 +365,7 @@ local function loadUI()
 	pauseButton.x = contW-49
 	pauseButton.y = 44
 
-	multiplierImage = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("2xmultiplier"), 33, 34)
+	multiplierImage = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("2xmultiplier"), 34, 28)
 	multiplierImage.x = contCX
 	multiplierImage.y = 110
 	multiplierImage.anchorX = 0.5 -- Aligned middle
@@ -1308,6 +1308,9 @@ local function continueGame()
 	if(cashTimer) then
 		timer.resume(cashTimer)
 	end
+	if(obstacleTimer) then
+		timer.resume(obstacleTimer)
+	end
 	if(speedTimer) then
 		timer.resume(speedTimer)
 	end
@@ -1364,6 +1367,9 @@ local function resumeGame()
 	end
 	if(cashTimer) then
 		timer.resume(cashTimer)
+	end
+	if(obstacleTimer) then
+		timer.resume(obstacleTimer)
 	end
 	if(speedTimer) then
 		timer.resume(speedTimer)
@@ -1505,6 +1511,10 @@ function scene:hide(event)
 				timer.cancel(cashTimer)
 			end
 
+			if(obstacleTimer) then
+				timer.cancel(obstacleTimer)
+			end
+
 			if(speedTimer) then
 				timer.cancel(speedTimer)
 			end
@@ -1538,6 +1548,7 @@ function scene:hide(event)
 			multiplierTimer = nil
 			energyTimer = nil
 			hidiTimer = nil
+			obstacleTimer = nil
 			
 			dashEmitter:stop()
 			dashEmitter = nil

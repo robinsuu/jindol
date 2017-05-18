@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------------------
 --
--- settings.lua
+-- contact.lua
 --
--- Mainly sound/music settings. This should be used as an overlay
+-- Contains contact info for the game/developer and support
 --
 -----------------------------------------------------------------------------------------
 
@@ -32,9 +32,8 @@ local contH = display.contentHeight
 ----
 local background
 local backButton
-local audioIcon, bgmIcon
-local audioSetting, bgmSetting
-local audioToggleArea, bgmToggleArea
+local websiteLink, emailLink, websiteText, emailText
+local url, email
 
 ----
 -- Display groups
@@ -50,104 +49,60 @@ local function initDisplayGroups()
 	uiGroup = display.newGroup()
 end
 
+local function initVariables()
+	url = "https://www.lezhin.com/ko/comic/jindoltoon/"
+	email = "walkcabbage@naver.com"
+end
+
 local function initImageSheets()
 	menuButtonImageSheet = graphics.newImageSheet("images/menu/menubuttons.png", menuSheetInfo:getSheet())
 end
 
 local function loadBackground()
-	background = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("settings"), 504, 315)
+	background = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("contact"), 498, 310)
 	background.x = contCX
 	background.y = contCY
 end
 
-local function pauseBgm()
-	audio.pause(1)
-end
-
-local function playBgm()
-	audio.resume(1)
-end
-
-local function checkSettings()
-	if(composer.getVariable("soundActive")) then
-		display.remove(audioSetting)
-		audioSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxchecked"), 72, 66)
-	else
-		display.remove(audioSetting)
-		audioSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxempty"), 45, 42)
-	end
-
-	audioSetting.x = contCX+30
-	audioSetting.y = (contH/2)-20
-
-	if(composer.getVariable("bgmActive")) then
-		display.remove(bgmSetting)
-		bgmSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxchecked"), 72, 66)
-	else
-		display.remove(bgmSetting)
-		bgmSetting = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("checkboxempty"), 45, 42)
-	end
-
-	bgmSetting.x = contCX+30
-	bgmSetting.y = (contH/2)+90
-end
-
 local function loadUI()
+	websiteText = display.newText(uiGroup, "Visit our website at:", contCX, (display.contentHeight/2)-30, "BRLNSR.TTF", 24)
+	websiteText:setFillColor(0)
+	websiteLink = display.newText(uiGroup, "https://www.lezhin.com/ko/comic/jindoltoon/", contCX, (display.contentHeight/2), "BRLNSR.TTF", 24)
+	websiteLink:setFillColor(0, 0.8, 1)
+	
+	emailText = display.newText(uiGroup, "E-mail us at:", contCX, (display.contentHeight/2)+50, "BRLNSR.TTF", 24)
+	emailText:setFillColor(0)
+	emailLink = display.newText(uiGroup, "walkcabbage@naver.com", contCX, (display.contentHeight/2)+80, "BRLNSR.TTF", 24)
+	emailLink:setFillColor(0, 0.8, 1)
+	
 	backButton = display.newRect(uiGroup, contCX+195, contCY-100, 110, 110)
+	backButton:setFillColor(0)
 	backButton.alpha = 0
 	backButton.isHitTestable = true
-
-	audioIcon = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("sound"), 57, 57)
-	audioIcon.x = contCX-70
-	audioIcon.y = (contH/2)-20
-
-	audioToggleArea = display.newRect(uiGroup, contCX-70, (contH/2)-20, 250, 55)
-	audioToggleArea.alpha = 0
-	audioToggleArea.isHitTestable = true
-
-	bgmIcon = display.newImageRect(backGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("music"), 48, 63)
-	bgmIcon.x = contCX-70
-	bgmIcon.y = (contH/2)+90
-
-	bgmToggleArea = display.newRect(uiGroup, contCX-70, (contH/2)+90, 250, 55)
-	bgmToggleArea.alpha = 0
-	bgmToggleArea.isHitTestable = true
-
-	checkSettings()
-end
-
-local function toggleBgm()
-	if(composer.getVariable("bgmActive")) then
-		composer.setVariable("bgmActive", false)
-		pauseBgm()
-		print("BGM toggled off")
-	else
-		composer.setVariable("bgmActive", true)
-		playBgm()
-		print("BGM toggled on")
-	end
-	checkSettings()
-end
-
-local function toggleAudio()
-	if(composer.getVariable("soundActive")) then
-		composer.setVariable("soundActive", false)
-		print("Audio toggled off")
-	else
-		composer.setVariable("soundActive", true)
-		print("Audio toggled on")
-	end
-	checkSettings()
 end
 
 local function gotoMainMenu()
 	composer.hideOverlay()
 end
 
+local function gotoUrl()
+	if(system.canOpenURL(url)) then
+		system.openURL(url)
+	end
+end
+
+local function gotoEmail()
+	if(system.canOpenURL("mailto:" .. email)) then
+		system.openURL("mailto:" .. email)
+	end
+end
+
 local function loadEventListeners()
 	backButton:addEventListener("tap", gotoMainMenu)
-	bgmToggleArea:addEventListener("tap", toggleBgm)
-	audioToggleArea:addEventListener("tap", toggleAudio)
+	websiteLink:addEventListener("tap", gotoUrl)
+	websiteText:addEventListener("tap", gotoUrl)
+	emailLink:addEventListener("tap", gotoEmail)
+	emailText:addEventListener("tap", gotoEmail)
 end
 
 -- -----------------------------------------------------------------------------------
@@ -164,6 +119,7 @@ function scene:create(event)
 	sceneGroup:insert(backGroup)
 	sceneGroup:insert(uiGroup)
 
+	initVariables()
 	initImageSheets()
 	loadBackground()
 	loadUI()
@@ -180,7 +136,6 @@ function scene:show(event)
 
 	elseif (phase == "did") then
 		-- Code here runs when the scene is entirely on screen
-		--composer.removeScene("scenes.game", false)
 		loadEventListeners()
 	end
 end
