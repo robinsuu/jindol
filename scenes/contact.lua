@@ -88,12 +88,16 @@ end
 local function gotoUrl()
 	if(system.canOpenURL(url)) then
 		system.openURL(url)
+	else
+		native.showPopup("Could not open website")
 	end
 end
 
 local function gotoEmail()
 	if(system.canOpenURL("mailto:" .. email)) then
 		system.openURL("mailto:" .. email)
+	else
+		native.showPopup("Could not open mail client")
 	end
 end
 

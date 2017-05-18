@@ -74,8 +74,8 @@ end
 local function loadHeroData()
 	heroData:loadHeroFromFile()
 
-	coins = heroData:getCoins()
-	cash = heroData:getCash()
+	coins = heroData:getCoins() or 0
+	cash = heroData:getCash() or 0
 end
 
 local function loadSharedItems()
@@ -174,7 +174,7 @@ local function playBgm()
 	if(composer.getVariable("bgmActive")) then
 		audio.reserveChannels(1)
 		audio.setVolume(0.5, { channel=1 })
-		audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
+		--audio.play(sfx.mainMenuMusic, { loops=-1, channel=1 })
 	end
 end
 

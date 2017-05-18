@@ -49,38 +49,42 @@ local mRand = math.random
 ----
 -- Fields
 ----
-local background
-local clouds1, clouds2, clouds3
+local background, clouds1, clouds2, clouds3
 local scenery1, scenery2, scenery3
 local foreground1, foreground2, foreground3
-local leftTouchArea, rightTouchArea, jumpButton, dashButton
+local leftTouchArea, rightTouchArea, jumpButton, dashButton, pauseButton
 local hero, hidi
-local memoryText -- Used for memory monitoring
+local meterText, coinsText, cashText, scoreText, memoryText
+local coinsIcon, cashIcon
+local energyMeter
+local magnetImage, multiplierImage, scoreBanner -- For displaying power ups while active
+local dashEmitter, coinEmitterParams
+
 local gameSpeed, mainSpeed -- mainSpeed default: 10 (the speed of the interactable objects)
-local isJumping, jumpTransition, isDashing, dashTransition, hidiTransition
-local obstacleCollisionTransition, heroCollisionTransition
-local gameOver, gameOverPerformed
+local groundBuffer -- The number of ground sections to be loaded at once
+local lastGroundType -- The last type of ground section generated
+local velocityX, velocityY -- Keeps track of hero speed
+local scoreMultiplier
+local coinsConsumed, cashConsumed, foodConsumed, score, energy, metersRun
+
+-- The below aren't used because the pause function doesn't work well with delta time
 local runtime -- Game time (used to calculate delta time)
 local dt -- Delta time
-local groundBuffer -- The number of ground sections to be loaded at once
-local lastGroundType
-local metersRun, meterText
-local energy, energyMeter
-local coinsConsumed, coinsText, coinsIcon
-local cashConsumed, cashText, cashIcon
-local foodConsumed, foodText -- To be implemented
-local score, scoreText
-local velocityX, velocityY -- Keeps track of hero speed
-local pauseButton, isPaused -- isPaused determines whether the entire game is paused or not
-local magnetActive
-local scoreMultiplier
-local magnetImage, multiplierImage -- For displaying power ups while active
-local soundActive, bgmActive
+
+----
+-- Flags
+----
+local gameOver, gameOverPerformed, magnetActive, okToCreateObstacle
+local isPaused -- isPaused determines whether the entire game is paused or not
+local canPause -- Whether the user is allowed to pause or not
 local invulnerable -- Invulnerable during retry (5 secs)
-local scoreBanner
-local canPause
-local dashEmitter, coinEmitterParams
-local okToCreateObstacle
+local soundActive, bgmActive
+
+----
+-- Transitions
+----
+local isJumping, jumpTransition, isDashing, dashTransition, hidiTransition
+local obstacleCollisionTransition, heroCollisionTransition
 
 ----
 -- Image sheets
@@ -95,13 +99,13 @@ local heroSequences, hidiSequences
 ----
 -- Tables
 ----
-local groundTable -- Holds the actual ground sections displayed in the world
-local coinTable -- Holds the coins displayed in the world
-local obstacleTable -- Holds the obstacles displayed in the world
-local foodTable -- Holds the food displayed in the world
-local cashTable -- Holds the cash displayed in the world
-local powerupTable -- Holds the power ups displayed in the world
-local coinEmitterTable -- Holds the particle emissions for consuming coins
+local groundTable -- The actual ground sections displayed in the world
+local coinTable -- The coins displayed in the world
+local obstacleTable -- The obstacles displayed in the world
+local foodTable -- The food displayed in the world
+local cashTable -- The cash displayed in the world
+local powerupTable -- The power ups displayed in the world
+local coinEmitterTable -- The particle emissions for consuming coins
 
 ----
 -- Timers
@@ -117,7 +121,6 @@ local backGroup, uiGroup, mainGroup, groundGroup, scoreBannerGroup
 ----
 -- Functions
 ----
--- If adding more display groups, don't forget to insert them into the scene group at scene:create
 local function initDisplayGroups()
 	backGroup = display.newGroup()
 	uiGroup = display.newGroup()
@@ -155,11 +158,11 @@ local function initVariables()
 	gameOver = false
 	gameOverPerformed = false
 	okToCreateObstacle = true
-	runtime = 0
-	dt = getDeltaTime()
+	--runtime = 0
+	--dt = getDeltaTime() -- Not used until the pause function is fixed
 	metersRun = 0
 	coinsConsumed = 0
-	cashConsumed = 0 -- Default 0
+	cashConsumed = 0
 	foodConsumed = 0
 	energy = 100
 	score = 0
@@ -251,10 +254,7 @@ end
 ----
 local function loadParticleEmitters()
 	coinEmitterParams = emitters:getCoinEmitter()
-	local dashEmitterParams = emitters:getDashEmitter() -- This one is temporary
-
-	--coinEmitter = display.newEmitter(coinEmitterParams)
-	--coinEmitter:stop()
+	local dashEmitterParams = emitters:getDashEmitter()
 	dashEmitter = display.newEmitter(dashEmitterParams)
 	dashEmitter:stop()
 end
@@ -263,10 +263,12 @@ local function playCoinEmitter(x, y)
 	local coinEmitterParams = emitters:getCoinEmitter()
 	local newCoinEmitter = display.newEmitter(coinEmitterParams)
 	table.insert(coinEmitterTable, newCoinEmitter)
-	local index = #coinEmitterTable
+
 	newCoinEmitter.x = x
 	newCoinEmitter.y = y
 	newCoinEmitter:start()
+
+	local index = #coinEmitterTable
 	timer.performWithDelay(500, function() 
 		newCoinEmitter:stop()
 		table.remove(coinEmitterTable, index)
@@ -290,7 +292,7 @@ local function loadHero()
 
 	physics.addBody(hero, "dynamic", physicsDef:get("hero"))
 	hero.isFixedRotation = true -- This makes sure the sprite is never rotated unless explicitly told so
-	hero.isSleepingAllowed = false -- This makes sure the player falls down gaps
+	hero.isSleepingAllowed = false -- This makes sure the player falls down gaps (gravity is always active)
 end
 
 local function loadHidi()
@@ -489,7 +491,7 @@ local function createObstacle(obstacleType, xPos, ability)
 	local properties = getObjectProperties(index)
 	local newObstacle = display.newImageRect(mainGroup, objectImageSheet, index, properties.width, properties.height)
 	newObstacle.x = xPos
-	newObstacle.y = contH-(newObstacle.height/2 + 64) -- Default: contH-(newObstacle.height/2 + 64) -- 64 is the default height of the ground
+	newObstacle.y = contH-(newObstacle.height/2 + 64) -- 64 is the default height of the ground
 	newObstacle.myName = obstacleType
 
 	physics.addBody(newObstacle, "static", physicsDef:get(obstacleType))
@@ -499,8 +501,6 @@ local function createObstacle(obstacleType, xPos, ability)
 end
 
 local function createRandomObstacle(xPos)
-	--local obstacles = {}
-	--obstacles = obstaclePatterns
 	local randNum = mRand(#obstaclePatterns)
 	local newObstacle = obstaclePatterns[randNum]
 
@@ -511,19 +511,6 @@ local function createRandomObstacle(xPos)
 			createObstacle(newObstacle.name, (xPos + (150 * i) - 600), newObstacle.ability)
 		end
 	end
-
-	--[[
-	if(randNum == 1) then
-		createObstacle(obstaclePatterns["smallTomatoOne"], xPos)
-	elseif(randNum == 2) then
-		createObstacle(obstaclePatterns["carrotOne"], xPos)
-	elseif(randNum == 3) then
-		--for i=1
-	elseif(randNum == 4) then
-		--createObstacle("tomato_big", xPos)
-	elseif(randNum == 5) then
-	elseif(randNum == 6) then
-	end]]
 end
 
 local function createGroundSection(name)
@@ -540,7 +527,6 @@ local function createGroundSection(name)
 	if(name ~= "hole") then
 		physics.addBody(newObj, "static", { bounce=0, density=0 })
 
-		-- Chance of spawning obstacle
 		if(metersRun > 5 and mRand(3) == 1 and #obstacleTable < 4 and lastGroundType == "middleGround") then
 			if(okToCreateObstacle) then
 				createRandomObstacle(newObj.x)
@@ -615,7 +601,6 @@ local function updateObstacles()
 		obstacle.x = (obstacle.x or 0) - (mainSpeed * gameSpeed)-- * dt -- If obstacle.x is false it will use 0 as a fallback value (obstacle.x will be false after a player has collided with it)
 
 		if(obstacle.x <= -100) then
-			-- Why no display.remove(obstable) ???
 			display.remove(obstacle)
 			table.remove(obstacleTable, i)
 		end
@@ -769,7 +754,7 @@ local function hidiMoveForward()
 
 	hidiTimer = timer.performWithDelay(1000, function() 
 		hidiTransition = transition.to(hidi, { time=2000, x=50 })
-		end, 1)
+	end, 1)
 end
 
 local function popDeath()
@@ -793,14 +778,6 @@ local function popDeath()
 end
 
 local function checkEnergyStatus()
-	--[[local energyGradient = {
-		type = "gradient",
-		color1 = { 1, 0.8, 1 }, -- 1, 0.8, 0
-		color2 = { 1, 1, 1 }, -- 1, 1, 1
-		direction = "right"
-	}
-	energyMeter.fill = energyGradient]]
-
 	if(energy <= 0) then
 		popDeath()
 	end
@@ -1013,62 +990,25 @@ local function checkHeroPosition()
 end
 
 local function performGameOver()
-	--------------------Experimental----------------------------
 	physics.pause()
 
-	if(dashTimer) then
-		timer.cancel(dashTimer)
-	end
-	if(coinTimer) then
-		timer.pause(coinTimer)
-	end
-	if(foodTimer) then
-		timer.pause(foodTimer)
-	end
-	if(cashTimer) then
-		timer.pause(cashTimer)
-	end
-	if(obstacleTimer) then
-		timer.pause(obstacleTimer)
-	end
-	if(speedTimer) then
-		timer.pause(speedTimer)
-	end
-	if(powerupTimer) then
-		timer.cancel(powerupTimer)
-	end
-	if(energyTimer) then
-		timer.cancel(energyTimer)
-	end
-	if(hidiTimer) then
-		timer.cancel(hidiTimer)
-	end
+	if(dashTimer) then timer.cancel(dashTimer) end
+	if(coinTimer) then timer.pause(coinTimer) end
+	if(foodTimer) then timer.pause(foodTimer) end
+	if(cashTimer) then timer.pause(cashTimer) end
+	if(obstacleTimer) then timer.pause(obstacleTimer) end
+	if(speedTimer) then timer.pause(speedTimer) end
+	if(powerupTimer) then timer.cancel(powerupTimer) end
+	if(energyTimer) then timer.cancel(energyTimer) end
+	if(hidiTimer) then timer.cancel(hidiTimer) end
+	if(multiplierTimer) then timer.cancel(multiplierTimer) end
+	if(magnetTimer) then timer.cancel(magnetTimer) end
 
-	if(multiplierTimer) then
-		timer.cancel(multiplierTimer)
-	end
-
-	if(magnetTimer) then
-		timer.cancel(magnetTimer)
-	end
-
-	if(jumpTransition) then
-		transition.cancel(jumpTransition)
-	end
-	if(dashTransition) then
-		transition.cancel(dashTransition)
-	end
-	if(hidiTransition) then
-		transition.cancel(hidiTransition)
-	end
-	if(obstacleCollisionTransition) then
-		transition.cancel(obstacleCollisionTransition)
-	end
-	if(heroCollisionTransition) then
-		transition.cancel(heroCollisionTransition)
-	end
-
-	-------------------
+	if(jumpTransition) then transition.cancel(jumpTransition) end
+	if(dashTransition) then	transition.cancel(dashTransition) end
+	if(hidiTransition) then	transition.cancel(hidiTransition) end
+	if(obstacleCollisionTransition) then transition.cancel(obstacleCollisionTransition) end
+	if(heroCollisionTransition) then transition.cancel(heroCollisionTransition)	end
 
 	print("<<Game Over>>")
 	hero:pause()
@@ -1124,6 +1064,9 @@ local function collideWithObstacle(obstacle)
 	end
 end
 
+----
+-- Handles all collisions
+----
 local function onCollision(event)
 	if(event.phase == "began") then
 		local obj1 = event.object1
@@ -1196,57 +1139,23 @@ local function pauseGame()
 
 		physics.pause()
 
-		if(dashTimer) then
-			timer.pause(dashTimer)
-		end
-		if(coinTimer) then
-			timer.pause(coinTimer)
-		end
-		if(foodTimer) then
-			timer.pause(foodTimer)
-		end
-		if(cashTimer) then
-			timer.pause(cashTimer)
-		end
-		if(obstacleTimer) then
-			timer.pause(obstacleTimer)
-		end
-		if(speedTimer) then
-			timer.pause(speedTimer)
-		end
-		if(powerupTimer) then
-			timer.pause(powerupTimer)
-		end
-		if(energyTimer) then
-			timer.pause(energyTimer)
-		end
-		if(hidiTimer) then
-			timer.pause(hidiTimer)
-		end
+		if(dashTimer) then timer.pause(dashTimer) end
+		if(coinTimer) then timer.pause(coinTimer) end
+		if(foodTimer) then timer.pause(foodTimer) end
+		if(cashTimer) then timer.pause(cashTimer) end
+		if(obstacleTimer) then timer.pause(obstacleTimer) end
+		if(speedTimer) then timer.pause(speedTimer) end
+		if(powerupTimer) then timer.pause(powerupTimer) end
+		if(energyTimer) then timer.pause(energyTimer) end
+		if(hidiTimer) then timer.pause(hidiTimer) end
+		if(multiplierTimer) then timer.pause(multiplierTimer) end
+		if(magnetTimer) then timer.pause(magnetTimer) end
 
-		if(multiplierTimer) then
-			timer.pause(multiplierTimer)
-		end
-
-		if(magnetTimer) then
-			timer.pause(magnetTimer)
-		end
-
-		if(jumpTransition) then
-			transition.pause(jumpTransition)
-		end
-		if(dashTransition) then
-			transition.pause(dashTransition)
-		end
-		if(hidiTransition) then
-			transition.pause(hidiTransition)
-		end
-		if(obstacleCollisionTransition) then
-			transition.pause(obstacleCollisionTransition)
-		end
-		if(heroCollisionTransition) then
-			transition.pause(heroCollisionTransition)
-		end
+		if(jumpTransition) then transition.pause(jumpTransition) end
+		if(dashTransition) then transition.pause(dashTransition) end
+		if(hidiTransition) then transition.pause(hidiTransition) end
+		if(obstacleCollisionTransition) then transition.pause(obstacleCollisionTransition) end
+		if(heroCollisionTransition) then transition.pause(heroCollisionTransition) end
 
 		hidi:pause()
 		hero:pause()
@@ -1284,7 +1193,7 @@ local function loadEventListeners()
 	Runtime:addEventListener("collision", onCollision)
 end
 
--- Important: Omit the () after timer callback functions or it will malfunction
+-- Important: Omit the () after timer callback functions or it will malfunction silently
 local function loadTimers()
 	coinTimer = timer.performWithDelay(5000, createRandomCoinPattern, 0)
 	foodTimer = timer.performWithDelay(4000, createRandomFood, 0)
@@ -1297,33 +1206,14 @@ end
 local function continueGame()
 	physics.start()
 
-	--loadEventListeners()
-
-	if(coinTimer) then
-		timer.resume(coinTimer)
-	end
-	if(foodTimer) then
-		timer.resume(foodTimer)
-	end
-	if(cashTimer) then
-		timer.resume(cashTimer)
-	end
-	if(obstacleTimer) then
-		timer.resume(obstacleTimer)
-	end
-	if(speedTimer) then
-		timer.resume(speedTimer)
-	end
-	--[[ The below may want to be re-added
-	if(powerupTimer) then
-		timer.resume(powerupTimer)
-	end]]
-	if(multiplierTimer) then
-		timer.resume(multiplierTimer)
-	end
-	if(magnetTimer) then
-		timer.pause(magnetTimer)
-	end
+	if(coinTimer) then timer.resume(coinTimer) end
+	if(foodTimer) then timer.resume(foodTimer) end
+	if(cashTimer) then timer.resume(cashTimer) end
+	if(obstacleTimer) then timer.resume(obstacleTimer) end
+	if(speedTimer) then timer.resume(speedTimer) end
+	-- if(powerupTimer) then timer.resume(powerupTimer) end -- May want to be re-added
+	if(multiplierTimer) then timer.resume(multiplierTimer) end
+	if(magnetTimer) then timer.pause(magnetTimer) end
 
 	cashConsumed = composer.getVariable("finalCashConsumed") -- Make sure that cash has the right value after continue
 
@@ -1356,57 +1246,23 @@ end
 local function resumeGame()
 	physics.start()
 
-	if(dashTimer) then
-		timer.resume(dashTimer)
-	end
-	if(coinTimer) then
-		timer.resume(coinTimer)
-	end
-	if(foodTimer) then
-		timer.resume(foodTimer)
-	end
-	if(cashTimer) then
-		timer.resume(cashTimer)
-	end
-	if(obstacleTimer) then
-		timer.resume(obstacleTimer)
-	end
-	if(speedTimer) then
-		timer.resume(speedTimer)
-	end
-	if(powerupTimer) then
-		timer.resume(powerupTimer)
-	end
-	if(energyTimer) then
-		timer.resume(energyTimer)
-	end
-	if(hidiTimer) then
-		timer.resume(hidiTimer)
-	end
+	if(dashTimer) then timer.resume(dashTimer) end
+	if(coinTimer) then timer.resume(coinTimer) end
+	if(foodTimer) then timer.resume(foodTimer) end
+	if(cashTimer) then timer.resume(cashTimer) end
+	if(obstacleTimer) then timer.resume(obstacleTimer) end
+	if(speedTimer) then timer.resume(speedTimer) end
+	if(powerupTimer) then timer.resume(powerupTimer) end
+	if(energyTimer) then timer.resume(energyTimer) end
+	if(hidiTimer) then timer.resume(hidiTimer) end
+	if(multiplierTimer) then timer.resume(multiplierTimer) end
+	if(magnetTimer) then timer.pause(magnetTimer) end
 
-	if(multiplierTimer) then
-		timer.resume(multiplierTimer)
-	end
-
-	if(magnetTimer) then
-		timer.pause(magnetTimer)
-	end
-
-	if(jumpTransition) then
-		transition.resume(jumpTransition)
-	end
-	if(dashTransition) then
-		transition.resume(dashTransition)
-	end
-	if(hidiTransition) then
-		transition.resume(hidiTransition)
-	end
-	if(obstacleCollisionTransition) then
-		transition.resume(obstacleCollisionTransition)
-	end
-	if(heroCollisionTransition) then
-		transition.resume(heroCollisionTransition)
-	end
+	if(jumpTransition) then transition.resume(jumpTransition) end
+	if(dashTransition) then transition.resume(dashTransition) end
+	if(hidiTransition) then transition.resume(hidiTransition) end
+	if(obstacleCollisionTransition) then transition.resume(obstacleCollisionTransition) end
+	if(heroCollisionTransition) then transition.resume(heroCollisionTransition) end
 
 	hidi:play()
 	hero:play()
@@ -1499,45 +1355,17 @@ function scene:hide(event)
 			audio.stop()
 			--audio.dispose(sfx.gameMusic)
 
-			if(coinTimer) then
-				timer.cancel(coinTimer)
-			end
-
-			if(foodTimer) then
-				timer.cancel(foodTimer)
-			end
-
-			if(cashTimer) then
-				timer.cancel(cashTimer)
-			end
-
-			if(obstacleTimer) then
-				timer.cancel(obstacleTimer)
-			end
-
-			if(speedTimer) then
-				timer.cancel(speedTimer)
-			end
-
-			if(powerupTimer) then
-				timer.cancel(powerupTimer)
-			end
-
-			if(energyTimer) then
-				timer.cancel(energyTimer)
-			end
-
-			if(multiplierTimer) then
-				timer.cancel(multiplierTimer)
-			end
-
-			if(magnetTimer) then
-				timer.cancel(magnetTimer)
-			end
-
-			if(dashTimer) then
-				timer.cancel(dashTimer)
-			end
+			if(coinTimer) then timer.cancel(coinTimer) end
+			if(foodTimer) then timer.cancel(foodTimer) end
+			if(cashTimer) then timer.cancel(cashTimer) end
+			if(obstacleTimer) then timer.cancel(obstacleTimer) end
+			if(speedTimer) then timer.cancel(speedTimer) end
+			if(powerupTimer) then timer.cancel(powerupTimer) end
+			if(energyTimer) then timer.cancel(energyTimer) end
+			if(multiplierTimer) then timer.cancel(multiplierTimer) end
+			if(magnetTimer) then timer.cancel(magnetTimer) end
+			if(dashTimer) then timer.cancel(dashTimer) end
+			
 			dashTimer = nil
 			coinTimer = nil
 			foodTimer = nil
@@ -1555,9 +1383,6 @@ function scene:hide(event)
 			coinEmitterTable = nil
 
 			print("Canceled timers/listeners/emitters and cleaned up memory")
-		else
-			--Runtime:removeEventListener("enterFrame", gameLoop)
-			--Runtime:removeEventListener("collision", onCollision)
 		end
 	elseif (phase == "did") then
 		print("<<DID HIDE>>")
