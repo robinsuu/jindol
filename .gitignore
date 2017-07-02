@@ -1,11 +1,15 @@
-#ignore these files/directories
+#ignoring these directories
 images/
 effects/
 audio/
 keystores/
-*.png
-appodealkey.lua
 Launchscreen.storyboardc/*
+
+#ignoring these files
+appodealkey.lua
+licenses.txt
+BRLNSR.TTF
+*.png
 .*
 
 #keep these files
