@@ -1,7 +1,7 @@
 #ignore these files/directories
-images
-effects
-audio
-keystores
-appodealkey.lua
+images/
+effects/
+audio/
+keystores/
 *.png
+appodealkey.lua
