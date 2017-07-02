@@ -6,4 +6,7 @@ keystores/
 *.png
 appodealkey.lua
 Launchscreen.storyboardc/*
-.CoronaLiveBuild
+.*
+
+#keep these files
+!/.gitignore
