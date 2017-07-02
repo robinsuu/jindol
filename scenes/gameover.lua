@@ -22,6 +22,7 @@ local heroData = require("scripts.herodata")
 local objectSheetInfo = require("scripts.objects")
 local menuSheetInfo = require("scripts.menubuttons")
 local appodeal = require("plugin.appodeal")
+local appodealkey = require ("scripts.appodealkey")
 
 ----
 -- Image sheets
@@ -176,8 +177,9 @@ function playAd()
 end
 
 local function initAds()
+	local key = appodealkey:getApiKey()
 	appodeal.init(adListener, {
-		appKey = "8e6e6c5acd1bddc48895968b56fb4b8c5cc359542697e6b0",
+		appKey = key,
 		locationTracking = false,
 		supportedAdTypes = {"rewardedVideo"},
 		testMode = true

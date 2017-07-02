@@ -1,0 +1,6 @@
+#ignore these files/directories
+images
+effects
+audio
+keystores
+appodealkey.lua
