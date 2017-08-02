@@ -1182,7 +1182,7 @@ local function gameLoop(event)
 	elseif(gameOver and not gameOverPerformed) then
 		performGameOver()
 	end
-	monitorMemory()
+	--monitorMemory()
 end
 
 local function loadEventListeners()

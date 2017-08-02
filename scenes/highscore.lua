@@ -97,7 +97,7 @@ end
 local function loadUI()
 	highScoreTitleText = display.newEmbossedText(uiGroup, "High Scores", contCX, 50, "BRLNSR.TTF", 72)
 
-	okText = display.newEmbossedText(uiGroup, "홈으로", contCX, contH-50, "BRLNSR.TTF", 72)
+	okText = display.newEmbossedText(uiGroup, "Return", contCX, contH-50, "BRLNSR.TTF", 72)
 end
 
 local function loadScoresFromFile()

@@ -41,7 +41,8 @@ local contH = display.contentHeight
 -- Fields
 ----
 local background
-local cashText, cashIcon, cashContinueIcon, adContinueIcon, cancelIcon
+local continueText, cashText, cashIcon, cashContinueIcon, adContinueIcon, cancelIcon
+local cashContinueText, adContinueText, cancelText
 local okToContinue
 local cash, newCash
 local adStarted
@@ -79,6 +80,10 @@ local function loadCash()
 end
 
 local function loadUI()
+	continueText = display.newEmbossedText(uiGroup, "Continue?", contCX-100, (display.contentHeight/2)-140, "BRLNSR.TTF", 50)
+	continueText.anchorX = 0
+	continueText:setFillColor(0)
+
 	cashContinueIcon = display.newImageRect(uiGroup, objectImageSheet, objectSheetInfo:getFrameIndex("cash"), 240, 210)
 	cashContinueIcon.x = contCX-250
 	cashContinueIcon.y = (display.contentHeight/2)
@@ -99,6 +104,18 @@ local function loadUI()
 	cashText = display.newEmbossedText(uiGroup, (cash + newCash), contCX, (display.contentHeight/2)-200, "BRLNSR.TTF", 50)
 	cashText.anchorX = 0
 	cashText:setFillColor(0)
+
+	cashContinueText = display.newEmbossedText(uiGroup, "5x", contCX-270, (display.contentHeight/2)+130, "BRLNSR.TTF", 40)
+	cashContinueText.anchorX = 0
+	cashContinueText:setFillColor(0)
+
+	adContinueText = display.newEmbossedText(uiGroup, "Watch ad", contCX-85, (display.contentHeight/2)+130, "BRLNSR.TTF", 40)
+	adContinueText.anchorX = 0
+	adContinueText:setFillColor(0)
+
+	cancelText = display.newEmbossedText(uiGroup, "Quit", contCX+215, (display.contentHeight/2)+130, "BRLNSR.TTF", 40)
+	cancelText.anchorX = 0
+	cancelText:setFillColor(0)
 end
 
 -- Check whether the player has more than 5 cash, then subtract it
