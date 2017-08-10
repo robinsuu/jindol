@@ -54,13 +54,13 @@ local scenery1, scenery2, scenery3
 local foreground1, foreground2, foreground3
 local leftTouchArea, rightTouchArea, jumpButton, dashButton, pauseButton
 local hero, hidi
-local meterText, coinsText, cashText, scoreText, memoryText
+local meterText, coinsText, cashText, scoreText, memoryText, speedIncreaseText
 local coinsIcon, cashIcon
 local energyMeter
 local magnetImage, multiplierImage, scoreBanner -- For displaying power ups while active
 local dashEmitter, coinEmitterParams
 
-local gameSpeed, mainSpeed -- mainSpeed default: 10 (the speed of the interactable objects)
+local gameSpeed, mainSpeed, speedIncreaseNumber -- mainSpeed default: 10 (the speed of the interactable objects)
 local groundBuffer -- The number of ground sections to be loaded at once
 local lastGroundType -- The last type of ground section generated
 local velocityX, velocityY -- Keeps track of hero speed
@@ -84,7 +84,7 @@ local soundActive, bgmActive
 -- Transitions
 ----
 local isJumping, jumpTransition, isDashing, dashTransition, hidiTransition
-local obstacleCollisionTransition, heroCollisionTransition
+local obstacleCollisionTransition, heroCollisionTransition, speedIncreaseTransition
 
 ----
 -- Image sheets
@@ -153,6 +153,7 @@ local function initVariables()
 	lastGroundType = "middleGround"
 	gameSpeed = 1 -- The speed modifier of the game, increases speed on the background/ground. Default: 1
 	mainSpeed = 12 -- Default: 10 (the speed of interactable objects)
+	speedIncreaseNumber = 1
 	isJumping = false
 	isDashing = false
 	gameOver = false
@@ -321,13 +322,13 @@ local function getObjectProperties(index)
 end
 
 local function loadUI()
-	jumpButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("jump"), 99, 72)
+	jumpButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("jump"), 148, 108) -- Default 99, 72
 	jumpButton.x = 70
-	jumpButton.y = contH-40
+	jumpButton.y = contH-45
 
-	dashButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("dash"), 99, 72)
+	dashButton = display.newImageRect(uiGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("dash"), 148, 108) -- Default 99, 72
 	dashButton.x = contW-70
-	dashButton.y = contH-40
+	dashButton.y = contH-45
 
 	scoreBanner = display.newImageRect(scoreBannerGroup, menuButtonImageSheet, menuSheetInfo:getFrameIndex("top_banner"), 492, 89)
 	scoreBanner.x = contCX
@@ -357,6 +358,9 @@ local function loadUI()
 	coinsText.anchorX = 0 -- Aligned left
 	cashText = display.newEmbossedText(uiGroup, "0", 60, 70, "BRLNSR.TTF", 30)
 	cashText.anchorX = 0 -- Aligned left
+
+	speedIncreaseText = display.newEmbossedText(uiGroup, "", contCX, contCY/2, "BRLNSR.TTF", 40)
+	speedIncreaseText.alpha = 0
 
 	energyMeter = display.newRect(scoreBannerGroup, contCX, 65, (energy * 4), 25)
 	energyMeter:setFillColor(1, 0.8, 1)
@@ -761,7 +765,7 @@ local function popDeath()
 	hero:toFront()
 	canPause = false
 	gameOver = true
-		timer.performWithDelay(1, function()
+	timer.performWithDelay(1, function()
 		physics.pause()
 		hero.x = contCX
 		hero.y = contCY
@@ -950,8 +954,24 @@ local function hidiDeathRun()
 	transition.to(hidi, { time=1500, x=contW+hidi.width})
 end
 
+local function displaySpeedIncrease()
+	speedIncreaseText.text = "Speed level: " .. speedIncreaseNumber .. "!"
+	speedIncreaseText.alpha = 1
+	speedIncreaseTransition = transition.to(speedIncreaseText, { 
+		delay=0, 
+		time=3000, 
+		size=56,
+		onComplete=function()
+			speedIncreaseText.text = ""
+			speedIncreaseText.size = 40
+			speedIncreaseText.alpha = 0
+		end })
+end
+
 local function increaseMainSpeed()
 	mainSpeed = mainSpeed + (mainSpeed * 0.1)
+	speedIncreaseNumber = speedIncreaseNumber + 1
+	displaySpeedIncrease()
 	print("Game speed is now: " .. mainSpeed)
 end
 
@@ -969,14 +989,20 @@ local function checkHeroPosition()
 		composer.setVariable("allowedToQuit", true)
 	end
 
+	velocityX, velocityY = hero:getLinearVelocity()
+
 	-- Adjust hero position if offset
 	if(hero.x > 301 or hero.x < 299 and hero.y <= contH-157) then
-		hero.x = 300
+		if(velocityX < 1) then
+			canPause = false
+			gameOver = true
+			composer.setVariable("allowedToQuit", true)
+		else 
+			hero.x = 300
+		end
 	end
 
 	if(isJumping) then
-		velocityX, velocityY = hero:getLinearVelocity()
-
 		-- If the character stands still it's OK to jump
 		if(velocityY == 0) then
 			isJumping = false
@@ -1006,6 +1032,7 @@ local function performGameOver()
 
 	if(jumpTransition) then transition.cancel(jumpTransition) end
 	if(dashTransition) then	transition.cancel(dashTransition) end
+	if(speedIncreaseTransition) then transition.cancel(speedIncreaseTransition) end
 	if(hidiTransition) then	transition.cancel(hidiTransition) end
 	if(obstacleCollisionTransition) then transition.cancel(obstacleCollisionTransition) end
 	if(heroCollisionTransition) then transition.cancel(heroCollisionTransition)	end
@@ -1153,6 +1180,7 @@ local function pauseGame()
 
 		if(jumpTransition) then transition.pause(jumpTransition) end
 		if(dashTransition) then transition.pause(dashTransition) end
+		if(speedIncreaseTransition) then transition.pause(speedIncreaseTransition) end
 		if(hidiTransition) then transition.pause(hidiTransition) end
 		if(obstacleCollisionTransition) then transition.pause(obstacleCollisionTransition) end
 		if(heroCollisionTransition) then transition.pause(heroCollisionTransition) end
@@ -1260,6 +1288,7 @@ local function resumeGame()
 
 	if(jumpTransition) then transition.resume(jumpTransition) end
 	if(dashTransition) then transition.resume(dashTransition) end
+	if(speedIncreaseTransition) then transition.resume(speedIncreaseTransition) end
 	if(hidiTransition) then transition.resume(hidiTransition) end
 	if(obstacleCollisionTransition) then transition.resume(obstacleCollisionTransition) end
 	if(heroCollisionTransition) then transition.resume(heroCollisionTransition) end

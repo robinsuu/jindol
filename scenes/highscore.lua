@@ -67,7 +67,7 @@ local function initVariables()
 	highscoreFilePath = system.pathForFile("scores.json", system.DocumentsDirectory)
 	scoresTable = {}
 	score = 0
-	metersRun = 0
+	metersRun = composer.getVariable("finalMetersRun")
 	coinsConsumed = 0
 	cashConsumed = 0
 	totalScore = 0
@@ -141,18 +141,18 @@ local function loadScores()
 	saveScoresToFile()
 
 	if(score and score ~= 0) then
-		scoreText = display.newEmbossedText(uiGroup, "Your score: " .. score, display.contentCenterX, 120, "BRLNSR.TTF", 36)
+		scoreText = display.newEmbossedText(uiGroup, "Your score: " .. score .. " (" .. metersRun .. " meters)", display.contentCenterX, 120, "BRLNSR.TTF", 36)
 	end
 
 	for i=1, 5 do
 		if(scoresTable[i]) then
 			local yPos = 230 + (i * 30) -- Default 230 + (i * 30)
 
-			local rankNum = display.newText(uiGroup, "#" .. i, contCX-30, yPos, "BRLNSR.TTF", 24)
+			local rankNum = display.newText(uiGroup, "#" .. i, contCX-60, yPos, "BRLNSR.TTF", 36)
 			rankNum:setFillColor(0)
 			rankNum.anchorX = 0.5
 
-			local thisScore = display.newText(uiGroup, scoresTable[i], contCX-10, yPos, "BRLNSR.TTF", 24)
+			local thisScore = display.newText(uiGroup, scoresTable[i], contCX+10, yPos, "BRLNSR.TTF", 36)
 			thisScore.anchorX = 0
 			thisScore:setFillColor(0)
 		end
@@ -163,8 +163,7 @@ local function loadHeroData()
 	totalMeters = composer.getVariable("totalMetersRun")
 	totalCoins = composer.getVariable("totalCoinsConsumed")
 	totalCash = composer.getVariable("totalCashConsumed")
-
-	print("<Last score:> " .. score .. " <Meters:> " .. totalMeters .. " <Coins:> " .. totalCoins .. " <Cash:> " .. totalCash)
+	--print("<Last score:> " .. score .. " <Meters:> " .. totalMeters .. " <Coins:> " .. totalCoins .. " <Cash:> " .. totalCash)
 end
 
 local function gotoMenu()
