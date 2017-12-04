@@ -12,3 +12,7 @@ iOS and Android.
 You can download an alpha version for Android here: https://play.google.com/store/apps/details?id=com.lazycapybara.jindol
 
 If you wish to test the iOS version, send me an e-mail at robin.fjarem@gmail.com and I will send an invite to Testflight.
+
+> Gameplay
+
+You can see the game in action here: https://www.youtube.com/watch?v=rigd4HAQrzY
