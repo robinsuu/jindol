@@ -1206,7 +1206,6 @@ local function gameLoop(event)
 		end
 
 		updateScreen()
-
 	elseif(gameOver and not gameOverPerformed) then
 		performGameOver()
 	end
@@ -1340,7 +1339,6 @@ end
 
 -- show()
 function scene:show(event)
-
 	local sceneGroup = self.view
 	local phase = event.phase
 
@@ -1368,7 +1366,6 @@ end
 
 -- hide()
 function scene:hide(event)
-
 	local sceneGroup = self.view
 	local phase = event.phase
 
